@@ -15,7 +15,7 @@ set(AES_HEADERS		src/aes.hpp)
 
 # crypt executable files
 set(CRYPT_SOURCES	${AES_SOURCES}
-			src/main.cpp
+			src/acrypt.cpp
 			src/sha256.c)
 
 set(CRYPT_HEADERS	${AES_HEADERS}
