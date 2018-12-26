@@ -65,12 +65,12 @@ void get_performance(clock_t diff) {
   }
 }
 
-int main() {
-  uint8_t exp_key[AES_EXP_KEY_SIZE];
-  uint8_t tmp[AES_BLOCK_SIZE];
-  uint8_t iv[AES_BLOCK_SIZE];
-  uint8_t digest[SHA256::HASH_SIZE];
+uint8_t exp_key[AES_EXP_KEY_SIZE];
+uint8_t tmp[AES_BLOCK_SIZE];
+uint8_t iv[AES_BLOCK_SIZE];
+uint8_t digest[SHA256::HASH_SIZE];
 
+int main() {
   clock_t begin, end;
 
   // allocate 1GB of memory
