@@ -146,7 +146,7 @@ static const uint32_t FT3[256] = { FT };
 /* super fast platform independent byte getter and setter */
 
 #if defined(__AMD64__) && defined(__GNUC__)
-#define GET_UINT32(n,b,i)	(n) = __builtin_bswap32(((uint32_t *) b)[i >> 2])
+#define GET_UINT32(n,b,i)	(n) = __builtin_bswap32(((const uint32_t *) b)[i >> 2])
 #else
 #define GET_UINT32(n,b,i)                       \
 {                                               \
@@ -170,17 +170,16 @@ static const uint32_t FT3[256] = { FT };
 #endif
 
 void aes_ctr_expand_key_generic(const uint8_t *key, uint32_t *exp_key) {
-    int i;
     uint32_t *RK = exp_key;
-    const int nbits = 256;
+    constexpr int nbits = 256;
 
-    for( i = 0; i < (nbits >> 5); i++ ) {
+    for(int i = 0; i < (nbits >> 5); i++ ) {
         GET_UINT32( RK[i], key, i * 4 );
     }
 
     /* setup encryption round keys */
 
-    for( i = 0; i < 7; i++, RK += 8 ) {
+    for(int i = 0; i < 7; i++, RK += 8 ) {
                 RK[8]  = RK[0] ^ RCON[i] ^
                          ( FSb[ (uint8_t) ( RK[7] >> 16 ) ] << 24 ) ^
                          ( FSb[ (uint8_t) ( RK[7] >>  8 ) ] << 16 ) ^
@@ -203,9 +202,9 @@ void aes_ctr_expand_key_generic(const uint8_t *key, uint32_t *exp_key) {
     }
 }
 
-static inline void encrypt_block(const uint32_t *ekey, uint8_t *block) {
+static inline void encrypt_block(const uint32_t *exp_key, uint8_t *block) {
     	uint32_t X0, X1, X2, X3, Y0, Y1, Y2, Y3;
-    	const uint32_t *RK = ekey;
+    	const uint32_t *RK = exp_key;
 
     	GET_UINT32( X0, block,  0 ); X0 ^= RK[0];
     	GET_UINT32( X1, block,  4 ); X1 ^= RK[1];
@@ -249,7 +248,7 @@ static inline void encrypt_block(const uint32_t *ekey, uint8_t *block) {
         AES_FROUND( X0, X1, X2, X3, Y0, Y1, Y2, Y3 );   /* round 10 */
         AES_FROUND( Y0, Y1, Y2, Y3, X0, X1, X2, X3 );   /* round 11 */
         AES_FROUND( X0, X1, X2, X3, Y0, Y1, Y2, Y3 );   /* round 12 */
-	AES_FROUND( Y0, Y1, Y2, Y3, X0, X1, X2, X3 );   /* round 13 */
+        AES_FROUND( Y0, Y1, Y2, Y3, X0, X1, X2, X3 );   /* round 13 */
 
     /* last round */
 
@@ -320,8 +319,8 @@ void aes_ctr_encdec_generic(const uint8_t *input, uint8_t *output, const uint32_
       encrypt_block(exp_key, (uint8_t*) xor_key);
 
       // xor input with encrypted counter and write result to output
-      ((uint64_t*) output)[0] = ((uint64_t*) input)[0] ^ xor_key[0];
-      ((uint64_t*) output)[1] = ((uint64_t*) input)[1] ^ xor_key[1];
+      ((uint64_t*) output)[0] = ((const uint64_t*) input)[0] ^ xor_key[0];
+      ((uint64_t*) output)[1] = ((const uint64_t*) input)[1] ^ xor_key[1];
 
       // advance pointers
       output += AES_BLOCK_SIZE;

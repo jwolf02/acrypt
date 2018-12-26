@@ -52,6 +52,7 @@ static void encrypt_file(FILE *in, FILE *out, uint8_t *key, uint32_t *exp_key) {
   SHA256::hash(key, AES_KEY_SIZE, buffer);
   buffer_size = AES_KEY_SIZE;
 
+  // hash of file content
   SHA1::context ctx;
   SHA1::init(ctx);
 
@@ -95,11 +96,12 @@ static void decrypt_file(FILE *in, FILE *out, uint8_t *key, uint32_t *exp_key) {
     throw std::runtime_error("IO-Error occurred (filesize insufficient)");
   }
 
+  // check if the key hashes match
   uint8_t hash_of_key[AES_KEY_SIZE];
   SHA256::hash(key, AES_KEY_SIZE, hash_of_key);
   aes_ctr_dec(buffer, buffer, exp_key, iv, 2);
   if (memcmp(buffer, hash_of_key, AES_KEY_SIZE) != 0) {
-    throw std::runtime_error("Invalid key!");
+    throw std::runtime_error("Invalid password!");
   }
 
   SHA1::context ctx;
@@ -135,12 +137,19 @@ static void decrypt_file(FILE *in, FILE *out, uint8_t *key, uint32_t *exp_key) {
   SHA1::final(ctx, checksum);
 
   if (memcmp(checksum, buffer + (buffer_size - SHA1::HASH_SIZE), SHA1::HASH_SIZE) != 0) {
-    throw std::runtime_error("Checksum mismatch, file corrupted");
+    throw std::runtime_error("Checksum mismatch, file may be corrupted");
   }
+}
+
+static void print_help() {
+  std::cout << "Encryption: acrypt -e password input.bin output.enc" << std::endl;
+  std::cout << "Decryption: acrypt -d password input.enc output.bin" << std::endl;
+  std::cout << "If no password is provided, the user may enter it secretly afterwards" << std::endl;
 }
 
 int main(int argc, const char *argv[]) {
   if (argc >= 2 && std::string(argv[1]) == "--help") {
+    print_help();
     exit(EXIT_SUCCESS);
   } else if (argc < 4) {
     std::cout << "Usage: " << argv[0] << " {-e | -d} [password] <input file> <output file>" << std::endl;
@@ -151,8 +160,10 @@ int main(int argc, const char *argv[]) {
   const std::string input_filename(argv[argc - 2]);
   const std::string output_filename(argv[argc - 1]);
 
+  // get password
   std::string password;
   if (argc < 5) {
+    // prompt the user
     const char *passwd = getpass("enter password: ");
     const char *confrm = getpass("confirm password: ");
     if (strcmp(passwd, confrm) != 0) {
@@ -162,11 +173,9 @@ int main(int argc, const char *argv[]) {
       password = passwd;
     }
   } else {
+    // provided as arguement
     password = argv[argc - 3];
   }
-
-  // salt password
-  password = "##########" + password + "0123456789";
 
   // compute key from password
   uint8_t key[SHA256::HASH_SIZE];
@@ -193,6 +202,7 @@ int main(int argc, const char *argv[]) {
     exit(EXIT_FAILURE);
   }
 
+  // do operation, catch exception
   try {
     if (mode == "-e" || mode == "--encrypt") {
       encrypt_file(in, out, key, (uint32_t *) exp_key);
@@ -205,6 +215,7 @@ int main(int argc, const char *argv[]) {
     std::cerr << err.what() << std::endl;
   }
 
+  // close files
   fclose(in);
   fclose(out);
 
