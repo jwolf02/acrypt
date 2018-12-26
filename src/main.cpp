@@ -6,20 +6,16 @@
 #include <cstdio>
 #include <array>
 #include <cstring>
+#include <unistd.h>
 
-#define BUFFER_SIZE     (1UL << 20)
-
-#define HEX_DUMP(x, n)  for (int i = 0; i < n; ++i) {\
-                          int _x = x[i]; \
-                          std::cout << std::hex << _x; } \
-                          std::cout << std::dec << std::endl;
+#define BUFFER_SIZE     (1UL << 24)
 
 static size_t _read(uint8_t *ptr, uint32_t num_bytes, FILE *f) {
   size_t b = 0;
   while (num_bytes && !feof(f)) {
     auto bytes_read = fread(ptr, 1, num_bytes, f);
     if (bytes_read < num_bytes && ferror(f)) {
-      throw std::runtime_error("IO-Error occurred (read)");
+      throw std::runtime_error("IO-Error occurred (input)");
     } else {
       num_bytes -= bytes_read;
       ptr += bytes_read;
@@ -34,7 +30,7 @@ static size_t _write(const uint8_t *ptr, uint32_t num_bytes, FILE *f) {
   while (num_bytes) {
     auto bytes_written = fwrite(ptr, 1, num_bytes, f);
     if (bytes_written < num_bytes && ferror(f)) {
-      throw std::runtime_error("IO-Error occurred (write)");
+      throw std::runtime_error("IO-Error occurred (output)");
     } else {
       num_bytes -= bytes_written;
       ptr += bytes_written;
@@ -49,7 +45,7 @@ static void encrypt_file(FILE *in, FILE *out, uint8_t *key, uint32_t *exp_key) {
   aes_generate_iv(iv);
   _write(iv, AES_BLOCK_SIZE, out);
 
-  unsigned bytes_read = 0;
+  // allocate buffer
   auto *buffer = (uint8_t*) malloc(BUFFER_SIZE);
   unsigned buffer_size = 0;
 
@@ -74,7 +70,7 @@ static void encrypt_file(FILE *in, FILE *out, uint8_t *key, uint32_t *exp_key) {
     // reduce buffer size and copy leftover bytes (those that did not form a complete block)
     // to the beginning of the buffer
     buffer_size -= num_blocks * AES_BLOCK_SIZE;
-    for (int i = 0; i < buffer_size; ++i)
+    for (int i = 0; i < (int) buffer_size; ++i)
       buffer[i] = buffer[(num_blocks * AES_BLOCK_SIZE) + i];
   }
 
@@ -87,17 +83,16 @@ static void encrypt_file(FILE *in, FILE *out, uint8_t *key, uint32_t *exp_key) {
 }
 
 static void decrypt_file(FILE *in, FILE *out, uint8_t *key, uint32_t *exp_key) {
-  unsigned bytes_read = 0;
   uint8_t iv[AES_BLOCK_SIZE];
   if (_read(iv, AES_BLOCK_SIZE, in) < AES_BLOCK_SIZE) {
-    throw std::runtime_error("IO-Error occurred (filesize)");
+    throw std::runtime_error("IO-Error occurred (filesize insufficient)");
   }
 
   auto *buffer = (uint8_t*) malloc(BUFFER_SIZE);
   unsigned buffer_size = 0;
 
   if ((buffer_size = _read(buffer, SHA256::HASH_SIZE, in)) < SHA256::HASH_SIZE) {
-    throw std::runtime_error("IO-Error occurred (filesize)");
+    throw std::runtime_error("IO-Error occurred (filesize insufficient)");
   }
 
   uint8_t hash_of_key[AES_KEY_SIZE];
@@ -127,7 +122,7 @@ static void decrypt_file(FILE *in, FILE *out, uint8_t *key, uint32_t *exp_key) {
     // reduce buffer size and copy leftover bytes (those that did not form a complete block and possible hash bytes)
     // to the beginning of the buffer
     buffer_size -= num_blocks * AES_BLOCK_SIZE;
-    for (int i = 0; i < buffer_size; ++i)
+    for (int i = 0; i < (int) buffer_size; ++i)
       buffer[i] = buffer[(num_blocks * AES_BLOCK_SIZE) + i];
   }
 
@@ -147,15 +142,31 @@ static void decrypt_file(FILE *in, FILE *out, uint8_t *key, uint32_t *exp_key) {
 int main(int argc, const char *argv[]) {
   if (argc >= 2 && std::string(argv[1]) == "--help") {
     exit(EXIT_SUCCESS);
-  } else if (argc < 5) {
-    std::cout << "Usage: " << argv[0] << " <mode> <password> <input file> <output file>" << std::endl;
+  } else if (argc < 4) {
+    std::cout << "Usage: " << argv[0] << " {-e | -d} [password] <input file> <output file>" << std::endl;
     exit(EXIT_FAILURE);
   }
 
-  std::string mode(argv[1]);
-  std::string password(argv[2]);
-  std::string input_filename(argv[3]);
-  std::string output_filename(argv[4]);
+  const std::string mode(argv[1]);
+  const std::string input_filename(argv[argc - 2]);
+  const std::string output_filename(argv[argc - 1]);
+
+  std::string password;
+  if (argc < 5) {
+    const char *passwd = getpass("enter password: ");
+    const char *confrm = getpass("confirm password: ");
+    if (strcmp(passwd, confrm) != 0) {
+      std::cerr << "Passwords mismatch!" << std::endl;
+      exit(EXIT_FAILURE);
+    } else {
+      password = passwd;
+    }
+  } else {
+    password = argv[argc - 3];
+  }
+
+  // salt password
+  password = "##########" + password + "0123456789";
 
   // compute key from password
   uint8_t key[SHA256::HASH_SIZE];

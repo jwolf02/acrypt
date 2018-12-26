@@ -16,10 +16,6 @@ typedef struct
     unsigned char buffer[64];
 } SHA1_CTX;
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 void SHA1Init(
         SHA1_CTX *context
 );
@@ -33,9 +29,5 @@ void SHA1Final(
         unsigned char digest[20],
         SHA1_CTX *context
 );
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif // __SHA1_H

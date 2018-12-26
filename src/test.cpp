@@ -11,6 +11,11 @@
 
 #define ENDIF_HARDWARE_SUPPORT }
 
+#define HEX_DUMP(x, n)    for (int i = 0; i < n; ++i) { \
+                            int _x = x[i]; \
+                            std::cout << std::hex << _x;} \
+                            std::cout << std::dec << std::endl;
+
 const uint8_t key[AES_KEY_SIZE] = {
         0x60, 0x3d, 0xeb, 0x10, 0x15, 0xca, 0x71, 0xbe,
         0x2b, 0x73, 0xae, 0xf0, 0x85, 0x7d, 0x77, 0x81,

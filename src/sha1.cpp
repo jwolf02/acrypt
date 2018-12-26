@@ -22,7 +22,7 @@ A million repetitions of "a"
 /* for uint32_t */
 #include <stdint.h>
 
-#include <sha1.h>
+#include <sha1.hpp>
 
 
 #define rol(value, bits) (((value) << (bits)) | ((value) >> (32 - (bits))))
@@ -253,7 +253,7 @@ void SHA1Final(
         int j;
 
         for (j = 0; j < 4; t >>= 8, j++)
-            *--fcp = (unsigned char) t}
+            *--fcp = (unsigned char) t;}
 #else
   for (i = 0; i < 8; i++)
   {
@@ -287,7 +287,7 @@ void SHA1(
   unsigned int ii;
 
   SHA1Init(&ctx);
-  for (ii=0; ii<len; ii+=1)
+  for (ii=0; ii< (unsigned) len; ii+=1)
     SHA1Update(&ctx, (const unsigned char*)str + ii, 1);
   SHA1Final((unsigned char *)hash_out, &ctx);
 }

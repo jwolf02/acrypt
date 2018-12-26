@@ -1,8 +1,8 @@
 #ifndef __HASH_HPP
 #define __HASH_HPP
 
-#include <sha256.h>
-#include <sha1.h>
+#include <sha256.hpp>
+#include <sha1.hpp>
 #include <cstddef>
 #include <cstdint>
 

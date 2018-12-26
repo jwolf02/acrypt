@@ -143,130 +143,6 @@ static const uint32_t FT3[256] = { FT };
 
 #undef FT
 
-/* reverse S-box */
-
-static const uint32_t RSb[256] = {
-    0x52, 0x09, 0x6A, 0xD5, 0x30, 0x36, 0xA5, 0x38,
-    0xBF, 0x40, 0xA3, 0x9E, 0x81, 0xF3, 0xD7, 0xFB,
-    0x7C, 0xE3, 0x39, 0x82, 0x9B, 0x2F, 0xFF, 0x87,
-    0x34, 0x8E, 0x43, 0x44, 0xC4, 0xDE, 0xE9, 0xCB,
-    0x54, 0x7B, 0x94, 0x32, 0xA6, 0xC2, 0x23, 0x3D,
-    0xEE, 0x4C, 0x95, 0x0B, 0x42, 0xFA, 0xC3, 0x4E,
-    0x08, 0x2E, 0xA1, 0x66, 0x28, 0xD9, 0x24, 0xB2,
-    0x76, 0x5B, 0xA2, 0x49, 0x6D, 0x8B, 0xD1, 0x25,
-    0x72, 0xF8, 0xF6, 0x64, 0x86, 0x68, 0x98, 0x16,
-    0xD4, 0xA4, 0x5C, 0xCC, 0x5D, 0x65, 0xB6, 0x92,
-    0x6C, 0x70, 0x48, 0x50, 0xFD, 0xED, 0xB9, 0xDA,
-    0x5E, 0x15, 0x46, 0x57, 0xA7, 0x8D, 0x9D, 0x84,
-    0x90, 0xD8, 0xAB, 0x00, 0x8C, 0xBC, 0xD3, 0x0A,
-    0xF7, 0xE4, 0x58, 0x05, 0xB8, 0xB3, 0x45, 0x06,
-    0xD0, 0x2C, 0x1E, 0x8F, 0xCA, 0x3F, 0x0F, 0x02,
-    0xC1, 0xAF, 0xBD, 0x03, 0x01, 0x13, 0x8A, 0x6B,
-    0x3A, 0x91, 0x11, 0x41, 0x4F, 0x67, 0xDC, 0xEA,
-    0x97, 0xF2, 0xCF, 0xCE, 0xF0, 0xB4, 0xE6, 0x73,
-    0x96, 0xAC, 0x74, 0x22, 0xE7, 0xAD, 0x35, 0x85,
-    0xE2, 0xF9, 0x37, 0xE8, 0x1C, 0x75, 0xDF, 0x6E,
-    0x47, 0xF1, 0x1A, 0x71, 0x1D, 0x29, 0xC5, 0x89,
-    0x6F, 0xB7, 0x62, 0x0E, 0xAA, 0x18, 0xBE, 0x1B,
-    0xFC, 0x56, 0x3E, 0x4B, 0xC6, 0xD2, 0x79, 0x20,
-    0x9A, 0xDB, 0xC0, 0xFE, 0x78, 0xCD, 0x5A, 0xF4,
-    0x1F, 0xDD, 0xA8, 0x33, 0x88, 0x07, 0xC7, 0x31,
-    0xB1, 0x12, 0x10, 0x59, 0x27, 0x80, 0xEC, 0x5F,
-    0x60, 0x51, 0x7F, 0xA9, 0x19, 0xB5, 0x4A, 0x0D,
-    0x2D, 0xE5, 0x7A, 0x9F, 0x93, 0xC9, 0x9C, 0xEF,
-    0xA0, 0xE0, 0x3B, 0x4D, 0xAE, 0x2A, 0xF5, 0xB0,
-    0xC8, 0xEB, 0xBB, 0x3C, 0x83, 0x53, 0x99, 0x61,
-    0x17, 0x2B, 0x04, 0x7E, 0xBA, 0x77, 0xD6, 0x26,
-    0xE1, 0x69, 0x14, 0x63, 0x55, 0x21, 0x0C, 0x7D
-};
-
-/* reverse tables */
-
-#define RT \
-\
-    V(51,F4,A7,50), V(7E,41,65,53), V(1A,17,A4,C3), V(3A,27,5E,96), \
-    V(3B,AB,6B,CB), V(1F,9D,45,F1), V(AC,FA,58,AB), V(4B,E3,03,93), \
-    V(20,30,FA,55), V(AD,76,6D,F6), V(88,CC,76,91), V(F5,02,4C,25), \
-    V(4F,E5,D7,FC), V(C5,2A,CB,D7), V(26,35,44,80), V(B5,62,A3,8F), \
-    V(DE,B1,5A,49), V(25,BA,1B,67), V(45,EA,0E,98), V(5D,FE,C0,E1), \
-    V(C3,2F,75,02), V(81,4C,F0,12), V(8D,46,97,A3), V(6B,D3,F9,C6), \
-    V(03,8F,5F,E7), V(15,92,9C,95), V(BF,6D,7A,EB), V(95,52,59,DA), \
-    V(D4,BE,83,2D), V(58,74,21,D3), V(49,E0,69,29), V(8E,C9,C8,44), \
-    V(75,C2,89,6A), V(F4,8E,79,78), V(99,58,3E,6B), V(27,B9,71,DD), \
-    V(BE,E1,4F,B6), V(F0,88,AD,17), V(C9,20,AC,66), V(7D,CE,3A,B4), \
-    V(63,DF,4A,18), V(E5,1A,31,82), V(97,51,33,60), V(62,53,7F,45), \
-    V(B1,64,77,E0), V(BB,6B,AE,84), V(FE,81,A0,1C), V(F9,08,2B,94), \
-    V(70,48,68,58), V(8F,45,FD,19), V(94,DE,6C,87), V(52,7B,F8,B7), \
-    V(AB,73,D3,23), V(72,4B,02,E2), V(E3,1F,8F,57), V(66,55,AB,2A), \
-    V(B2,EB,28,07), V(2F,B5,C2,03), V(86,C5,7B,9A), V(D3,37,08,A5), \
-    V(30,28,87,F2), V(23,BF,A5,B2), V(02,03,6A,BA), V(ED,16,82,5C), \
-    V(8A,CF,1C,2B), V(A7,79,B4,92), V(F3,07,F2,F0), V(4E,69,E2,A1), \
-    V(65,DA,F4,CD), V(06,05,BE,D5), V(D1,34,62,1F), V(C4,A6,FE,8A), \
-    V(34,2E,53,9D), V(A2,F3,55,A0), V(05,8A,E1,32), V(A4,F6,EB,75), \
-    V(0B,83,EC,39), V(40,60,EF,AA), V(5E,71,9F,06), V(BD,6E,10,51), \
-    V(3E,21,8A,F9), V(96,DD,06,3D), V(DD,3E,05,AE), V(4D,E6,BD,46), \
-    V(91,54,8D,B5), V(71,C4,5D,05), V(04,06,D4,6F), V(60,50,15,FF), \
-    V(19,98,FB,24), V(D6,BD,E9,97), V(89,40,43,CC), V(67,D9,9E,77), \
-    V(B0,E8,42,BD), V(07,89,8B,88), V(E7,19,5B,38), V(79,C8,EE,DB), \
-    V(A1,7C,0A,47), V(7C,42,0F,E9), V(F8,84,1E,C9), V(00,00,00,00), \
-    V(09,80,86,83), V(32,2B,ED,48), V(1E,11,70,AC), V(6C,5A,72,4E), \
-    V(FD,0E,FF,FB), V(0F,85,38,56), V(3D,AE,D5,1E), V(36,2D,39,27), \
-    V(0A,0F,D9,64), V(68,5C,A6,21), V(9B,5B,54,D1), V(24,36,2E,3A), \
-    V(0C,0A,67,B1), V(93,57,E7,0F), V(B4,EE,96,D2), V(1B,9B,91,9E), \
-    V(80,C0,C5,4F), V(61,DC,20,A2), V(5A,77,4B,69), V(1C,12,1A,16), \
-    V(E2,93,BA,0A), V(C0,A0,2A,E5), V(3C,22,E0,43), V(12,1B,17,1D), \
-    V(0E,09,0D,0B), V(F2,8B,C7,AD), V(2D,B6,A8,B9), V(14,1E,A9,C8), \
-    V(57,F1,19,85), V(AF,75,07,4C), V(EE,99,DD,BB), V(A3,7F,60,FD), \
-    V(F7,01,26,9F), V(5C,72,F5,BC), V(44,66,3B,C5), V(5B,FB,7E,34), \
-    V(8B,43,29,76), V(CB,23,C6,DC), V(B6,ED,FC,68), V(B8,E4,F1,63), \
-    V(D7,31,DC,CA), V(42,63,85,10), V(13,97,22,40), V(84,C6,11,20), \
-    V(85,4A,24,7D), V(D2,BB,3D,F8), V(AE,F9,32,11), V(C7,29,A1,6D), \
-    V(1D,9E,2F,4B), V(DC,B2,30,F3), V(0D,86,52,EC), V(77,C1,E3,D0), \
-    V(2B,B3,16,6C), V(A9,70,B9,99), V(11,94,48,FA), V(47,E9,64,22), \
-    V(A8,FC,8C,C4), V(A0,F0,3F,1A), V(56,7D,2C,D8), V(22,33,90,EF), \
-    V(87,49,4E,C7), V(D9,38,D1,C1), V(8C,CA,A2,FE), V(98,D4,0B,36), \
-    V(A6,F5,81,CF), V(A5,7A,DE,28), V(DA,B7,8E,26), V(3F,AD,BF,A4), \
-    V(2C,3A,9D,E4), V(50,78,92,0D), V(6A,5F,CC,9B), V(54,7E,46,62), \
-    V(F6,8D,13,C2), V(90,D8,B8,E8), V(2E,39,F7,5E), V(82,C3,AF,F5), \
-    V(9F,5D,80,BE), V(69,D0,93,7C), V(6F,D5,2D,A9), V(CF,25,12,B3), \
-    V(C8,AC,99,3B), V(10,18,7D,A7), V(E8,9C,63,6E), V(DB,3B,BB,7B), \
-    V(CD,26,78,09), V(6E,59,18,F4), V(EC,9A,B7,01), V(83,4F,9A,A8), \
-    V(E6,95,6E,65), V(AA,FF,E6,7E), V(21,BC,CF,08), V(EF,15,E8,E6), \
-    V(BA,E7,9B,D9), V(4A,6F,36,CE), V(EA,9F,09,D4), V(29,B0,7C,D6), \
-    V(31,A4,B2,AF), V(2A,3F,23,31), V(C6,A5,94,30), V(35,A2,66,C0), \
-    V(74,4E,BC,37), V(FC,82,CA,A6), V(E0,90,D0,B0), V(33,A7,D8,15), \
-    V(F1,04,98,4A), V(41,EC,DA,F7), V(7F,CD,50,0E), V(17,91,F6,2F), \
-    V(76,4D,D6,8D), V(43,EF,B0,4D), V(CC,AA,4D,54), V(E4,96,04,DF), \
-    V(9E,D1,B5,E3), V(4C,6A,88,1B), V(C1,2C,1F,B8), V(46,65,51,7F), \
-    V(9D,5E,EA,04), V(01,8C,35,5D), V(FA,87,74,73), V(FB,0B,41,2E), \
-    V(B3,67,1D,5A), V(92,DB,D2,52), V(E9,10,56,33), V(6D,D6,47,13), \
-    V(9A,D7,61,8C), V(37,A1,0C,7A), V(59,F8,14,8E), V(EB,13,3C,89), \
-    V(CE,A9,27,EE), V(B7,61,C9,35), V(E1,1C,E5,ED), V(7A,47,B1,3C), \
-    V(9C,D2,DF,59), V(55,F2,73,3F), V(18,14,CE,79), V(73,C7,37,BF), \
-    V(53,F7,CD,EA), V(5F,FD,AA,5B), V(DF,3D,6F,14), V(78,44,DB,86), \
-    V(CA,AF,F3,81), V(B9,68,C4,3E), V(38,24,34,2C), V(C2,A3,40,5F), \
-    V(16,1D,C3,72), V(BC,E2,25,0C), V(28,3C,49,8B), V(FF,0D,95,41), \
-    V(39,A8,01,71), V(08,0C,B3,DE), V(D8,B4,E4,9C), V(64,56,C1,90), \
-    V(7B,CB,84,61), V(D5,32,B6,70), V(48,6C,5C,74), V(D0,B8,57,42)
-
-#define V(a,b,c,d) 0x##a##b##c##d
-static const uint32_t RT0[256] = { RT };
-#undef V
-
-#define V(a,b,c,d) 0x##d##a##b##c
-static const uint32_t RT1[256] = { RT };
-#undef V
-
-#define V(a,b,c,d) 0x##c##d##a##b
-static const uint32_t RT2[256] = { RT };
-#undef V
-
-#define V(a,b,c,d) 0x##b##c##d##a
-static const uint32_t RT3[256] = { RT };
-#undef V
-
-#undef RT
-
 /* super fast platform independent byte getter and setter */
 
 #if defined(__AMD64__) && defined(__GNUC__)
@@ -292,15 +168,6 @@ static const uint32_t RT3[256] = { RT };
     (b)[(i) + 3] = (uint8_t) ( (n)       );       \
 }
 #endif
-
-/* decryption key schedule tables */
-
-int KT_init = 1;
-
-uint32 KT0[256];
-uint32 KT1[256];
-uint32 KT2[256];
-uint32 KT3[256];
 
 void aes_ctr_expand_key_generic(const uint8_t *key, uint32_t *exp_key) {
     int i;
@@ -336,14 +203,14 @@ void aes_ctr_expand_key_generic(const uint8_t *key, uint32_t *exp_key) {
     }
 }
 
-static void encrypt_block(const uint32_t *ekey, uint8_t *in, uint8_t *out) {
+static inline void encrypt_block(const uint32_t *ekey, uint8_t *block) {
     	uint32_t X0, X1, X2, X3, Y0, Y1, Y2, Y3;
     	const uint32_t *RK = ekey;
 
-    	GET_UINT32( X0, in,  0 ); X0 ^= RK[0];
-    	GET_UINT32( X1, in,  4 ); X1 ^= RK[1];
-    	GET_UINT32( X2, in,  8 ); X2 ^= RK[2];
-    	GET_UINT32( X3, in, 12 ); X3 ^= RK[3];
+    	GET_UINT32( X0, block,  0 ); X0 ^= RK[0];
+    	GET_UINT32( X1, block,  4 ); X1 ^= RK[1];
+    	GET_UINT32( X2, block,  8 ); X2 ^= RK[2];
+    	GET_UINT32( X3, block, 12 ); X3 ^= RK[3];
 
 	#define AES_FROUND(X0,X1,X2,X3,Y0,Y1,Y2,Y3)     \
 	{                                               \
@@ -408,16 +275,16 @@ static void encrypt_block(const uint32_t *ekey, uint8_t *in, uint8_t *out) {
          ( FSb[ (uint8_t) ( Y1 >>  8 ) ] <<  8 ) ^
          ( FSb[ (uint8_t) ( Y2       ) ]       );
 
-    PUT_UINT32( X0, out,  0 );
-    PUT_UINT32( X1, out,  4 );
-    PUT_UINT32( X2, out,  8 );
-    PUT_UINT32( X3, out, 12 );
+    PUT_UINT32( X0, block,  0 );
+    PUT_UINT32( X1, block,  4 );
+    PUT_UINT32( X2, block,  8 );
+    PUT_UINT32( X3, block, 12 );
 }
 
-static void inc_counter(uint8_t *counter) {
+static inline void inc_counter(uint8_t *counter, uint64_t inc=1) {
   #ifdef __GNUC__
   auto n = __builtin_bswap64(((uint64_t *) counter)[1]);
-  ((uint64_t *) counter)[1] = __builtin_bswap64(n + 1);
+  ((uint64_t *) counter)[1] = __builtin_bswap64(n + inc);
   #else
   union {
       uint8_t bytes[8];
@@ -431,7 +298,7 @@ static void inc_counter(uint8_t *counter) {
     cvrt.bytes[15 - i] = counter[i];
 
   // inc counter
-  cvrt.n += 1;
+  cvrt.n += inc;
 
   // convert back to little endian
   for (int i = 15; i >= 8; --i)
@@ -450,7 +317,7 @@ void aes_ctr_encdec_generic(const uint8_t *input, uint8_t *output, const uint32_
       };
 
       // encrypt counter
-      encrypt_block(exp_key, (uint8_t*) xor_key, (uint8_t*) xor_key);
+      encrypt_block(exp_key, (uint8_t*) xor_key);
 
       // xor input with encrypted counter and write result to output
       ((uint64_t*) output)[0] = ((uint64_t*) input)[0] ^ xor_key[0];
@@ -494,8 +361,6 @@ static inline void KEY_256_ASSIST_2(__m128i* temp1, __m128i * temp3) {
 
 void aes_ctr_expand_key_aesni(const uint8_t *key, uint32_t *ekey) {
     #ifdef __AMD64__
-
-    /* encryption key schedule */
 
     __m128i temp1, temp2, temp3;
     __m128i *Key_Schedule = (__m128i*)ekey;
@@ -547,26 +412,53 @@ void aes_ctr_encdec_aesni(const uint8_t *input, uint8_t *output, const uint32_t 
 {
 	#ifdef __AMD64__
 
-	__m128i ctr_block, tmp, ONE, BSWAP_EPI64;
+	__m128i ctr_block, tmp0, tmp1;
 
-	ONE = _mm_set_epi32(0, 1, 0, 0);
-  BSWAP_EPI64 = _mm_setr_epi8(7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8);
+	const __m128i ONE = _mm_set_epi32(0, 1, 0, 0);
+  const __m128i BSWAP_EPI64 = _mm_setr_epi8(7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8);
 
-  // load counter
   ctr_block = _mm_loadu_si128((const __m128i *) iv);
-  ctr_block = _mm_shuffle_epi8(ctr_block, BSWAP_EPI64); // ctr_block is held in big endian order
+  ctr_block = _mm_shuffle_epi8(ctr_block, BSWAP_EPI64);
 
-  for (int i = 0; i < (int) n; ++i) {
+  // Running 2 blocks in parallel exploiting instruction level parallelism
+  int c = 0;
+  for (int i = 0; i < (int) n; i += 2) {
+    tmp0 = _mm_shuffle_epi8(ctr_block, BSWAP_EPI64);
+    ctr_block = _mm_add_epi64(ctr_block, ONE);
+    tmp1 = _mm_shuffle_epi8(ctr_block, BSWAP_EPI64);
+    ctr_block = _mm_add_epi64(ctr_block, ONE);
+
+    tmp0 =_mm_xor_si128(tmp0, ((const __m128i *) exp_key)[0]);
+    tmp1 =_mm_xor_si128(tmp1, ((const __m128i *) exp_key)[0]);
+
+    for (int j = 1; j < 14; ++j) {
+      tmp0 = _mm_aesenc_si128(tmp0, ((const __m128i *) exp_key)[j]);
+      tmp1 = _mm_aesenc_si128(tmp1, ((const __m128i *) exp_key)[j]);
+    }
+    tmp0 = _mm_aesenclast_si128(tmp0, ((const __m128i *) exp_key)[14]);
+    tmp1 = _mm_aesenclast_si128(tmp1, ((const __m128i *) exp_key)[14]);
+    tmp0 = _mm_xor_si128(tmp0, _mm_loadu_si128(&((const __m128i*) input)[i]));
+    tmp1 = _mm_xor_si128(tmp1, _mm_loadu_si128(&((const __m128i*) input)[i + 1]));
+
+    _mm_storeu_si128(&((__m128i*) output)[i], tmp0);
+    _mm_storeu_si128(&((__m128i*) output)[i + 1], tmp1);
+
+    c += 2;
+  }
+
+  if (n & 1) {
+    __m128i tmp;
     // copy counter to little endian (stored in tmp)
     tmp = _mm_shuffle_epi8(ctr_block, BSWAP_EPI64);
 
+    // run encryption
     tmp =_mm_xor_si128(tmp, ((const __m128i *) exp_key)[0]);
     for (int j = 1; j < 14; ++j) {
       tmp = _mm_aesenc_si128(tmp, ((const __m128i *) exp_key)[j]);
     }
     tmp = _mm_aesenclast_si128(tmp, ((const __m128i *) exp_key)[14]);
-    tmp = _mm_xor_si128(tmp, _mm_loadu_si128(&((const __m128i*) input)[i]));
-    _mm_storeu_si128(&((__m128i*) output)[i], tmp);
+    tmp = _mm_xor_si128(tmp, _mm_loadu_si128(&((const __m128i*) input)[c]));
+    _mm_storeu_si128(&((__m128i*) output)[c], tmp);
 
     // increment counter
     ctr_block = _mm_add_epi64(ctr_block, ONE);
