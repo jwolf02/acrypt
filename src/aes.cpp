@@ -1,9 +1,7 @@
-/* aes.cpp */
-
-#include <aes.hpp>
 #include <cstdlib>
 #include <ctime>
-#include <memory.h>
+#include <cstddef>
+#include <aes.hpp>
 
 #ifdef __AMD64__
 #include <wmmintrin.h>
@@ -12,20 +10,16 @@
 #include <tmmintrin.h>
 #endif
 
-void AES::generate_iv(uint8_t *iv) {
-    // seed PRNG
-    srand((unsigned int) clock());
-    // generate 16 bytes
-    for (uint64_t i = 0; i < BLOCK_SIZE; ++i) {
-        iv[i] = (uint8_t) (rand() & 0xff);
-    }
-}
+typedef uint8_t uint8;
+typedef uint32_t uint32;
 
 static const uint32_t RCON[10] = {
         0x01000000, 0x02000000, 0x04000000, 0x08000000,
         0x10000000, 0x20000000, 0x40000000, 0x80000000,
         0x1B000000, 0x36000000
 };
+
+/* forward s-box */
 
 static const uint32_t FSb[256] = {
          0x63, 0x7C, 0x77, 0x7B, 0xF2, 0x6B, 0x6F, 0xC5,
@@ -299,7 +293,16 @@ static const uint32_t RT3[256] = { RT };
 }
 #endif
 
-void AES::expand_key_generic(int mode, const uint8_t *key, uint32_t *exp_key) {
+/* decryption key schedule tables */
+
+int KT_init = 1;
+
+uint32 KT0[256];
+uint32 KT1[256];
+uint32 KT2[256];
+uint32 KT3[256];
+
+void aes_ctr_expand_key_generic(const uint8_t *key, uint32_t *exp_key) {
     int i;
     uint32_t *RK = exp_key;
     const int nbits = 256;
@@ -307,6 +310,8 @@ void AES::expand_key_generic(int mode, const uint8_t *key, uint32_t *exp_key) {
     for( i = 0; i < (nbits >> 5); i++ ) {
         GET_UINT32( RK[i], key, i * 4 );
     }
+
+    /* setup encryption round keys */
 
     for( i = 0; i < 7; i++, RK += 8 ) {
                 RK[8]  = RK[0] ^ RCON[i] ^
@@ -331,14 +336,14 @@ void AES::expand_key_generic(int mode, const uint8_t *key, uint32_t *exp_key) {
     }
 }
 
-static void encrypt_block(uint8_t *block, const uint32_t *exp_key) {
+static void encrypt_block(const uint32_t *ekey, uint8_t *in, uint8_t *out) {
     	uint32_t X0, X1, X2, X3, Y0, Y1, Y2, Y3;
-    	const uint32_t *RK = exp_key;
+    	const uint32_t *RK = ekey;
 
-    	GET_UINT32( X0, block,  0 ); X0 ^= RK[0];
-    	GET_UINT32( X1, block,  4 ); X1 ^= RK[1];
-    	GET_UINT32( X2, block,  8 ); X2 ^= RK[2];
-    	GET_UINT32( X3, block, 12 ); X3 ^= RK[3];
+    	GET_UINT32( X0, in,  0 ); X0 ^= RK[0];
+    	GET_UINT32( X1, in,  4 ); X1 ^= RK[1];
+    	GET_UINT32( X2, in,  8 ); X2 ^= RK[2];
+    	GET_UINT32( X3, in, 12 ); X3 ^= RK[3];
 
 	#define AES_FROUND(X0,X1,X2,X3,Y0,Y1,Y2,Y3)     \
 	{                                               \
@@ -403,53 +408,61 @@ static void encrypt_block(uint8_t *block, const uint32_t *exp_key) {
          ( FSb[ (uint8_t) ( Y1 >>  8 ) ] <<  8 ) ^
          ( FSb[ (uint8_t) ( Y2       ) ]       );
 
-    PUT_UINT32( X0, block,  0 );
-    PUT_UINT32( X1, block,  4 );
-    PUT_UINT32( X2, block,  8 );
-    PUT_UINT32( X3, block, 12 );
+    PUT_UINT32( X0, out,  0 );
+    PUT_UINT32( X1, out,  4 );
+    PUT_UINT32( X2, out,  8 );
+    PUT_UINT32( X3, out, 12 );
 }
 
-void AES::encrypt_generic(const uint8_t *input, uint8_t *output, const uint32_t *exp_key,
-		uint8_t *iv, uint64_t length)
+static void inc_counter(uint8_t *counter) {
+  #ifdef __GNUC__
+  auto n = __builtin_bswap64(((uint64_t *) counter)[1]);
+  ((uint64_t *) counter)[1] = __builtin_bswap64(n + 1);
+  #else
+  union {
+      uint8_t bytes[8];
+      uint64_t n;
+  } cvrt;
+
+  cvrt.n = 0;
+
+  // convert to big endian
+  for (int i = 15; i >= 8; --i)
+    cvrt.bytes[15 - i] = counter[i];
+
+  // inc counter
+  cvrt.n += 1;
+
+  // convert back to little endian
+  for (int i = 15; i >= 8; --i)
+    counter[i] = cvrt.bytes[15 - i];
+  #endif
+}
+
+void aes_ctr_encdec_generic(const uint8_t *input, uint8_t *output, const uint32_t *exp_key,
+		uint8_t *iv, uint64_t n)
 {
-    if ((length & 0xff) != 0) {
-        length = (length >> 4) + 1;
-    } else {
-        length >>= 4;
+    for (uint64_t i = 0; i < n; ++i) {
+      // load counter
+      uint64_t xor_key[2] = {
+              ((uint64_t *) iv)[0],
+              ((uint64_t *) iv)[1]
+      };
+
+      // encrypt counter
+      encrypt_block(exp_key, (uint8_t*) xor_key, (uint8_t*) xor_key);
+
+      // xor input with encrypted counter and write result to output
+      ((uint64_t*) output)[0] = ((uint64_t*) input)[0] ^ xor_key[0];
+      ((uint64_t*) output)[1] = ((uint64_t*) input)[1] ^ xor_key[1];
+
+      // advance pointers
+      output += AES_BLOCK_SIZE;
+      input += AES_BLOCK_SIZE;
+
+      // increment counter
+      inc_counter(iv);
     }
-
-    uint64_t feedback[2] = {
-	((uint64_t *) iv)[0],
-	((uint64_t *) iv)[1]
-    };
-
-    for (uint64_t i = 0; i < length; ++i) {
-	
-	// XOR plaintext with previous cipher text block
-	((uint64_t *) output)[0] = ((const uint64_t *) input)[0] ^ feedback[0];
-	((uint64_t *) output)[1] = ((const uint64_t *) input)[1] ^ feedback[1];
-
-        encrypt_block(output, exp_key);
-
-        feedback[0] = ((uint64_t *) output)[0];
-	feedback[1] = ((uint64_t *) output)[1];
-
-	input += BLOCK_SIZE;
-	output += BLOCK_SIZE;
-    }
-
-    ((uint64_t *) iv)[0] = feedback[0];
-    ((uint64_t *) iv)[1] = feedback[1];
-}
-
-static void decrypt_block(uint8_t *block, const uint32_t *exp_key) {
-
-}
-
-void AES::decrypt_generic(const uint8_t *input, uint8_t *output, const uint32_t *exp_key,
-		uint8_t *iv, uint64_t length)
-{
-
 }
 
 #ifdef __AMD64__
@@ -479,10 +492,13 @@ static inline void KEY_256_ASSIST_2(__m128i* temp1, __m128i * temp3) {
 }
 #endif
 
-void AES::expand_key_aesni(int mode, const uint8_t *key, uint32_t *exp_key) {
+void aes_ctr_expand_key_aesni(const uint8_t *key, uint32_t *ekey) {
     #ifdef __AMD64__
+
+    /* encryption key schedule */
+
     __m128i temp1, temp2, temp3;
-    __m128i *Key_Schedule = (__m128i*)exp_key;
+    __m128i *Key_Schedule = (__m128i*)ekey;
     temp1 = _mm_loadu_si128((__m128i*)key);
     temp3 = _mm_loadu_si128((__m128i*)(key+16));
     Key_Schedule[0] = temp1;
@@ -520,73 +536,45 @@ void AES::expand_key_aesni(int mode, const uint8_t *key, uint32_t *exp_key) {
     temp2 = _mm_aeskeygenassist_si128(temp3,0x40);
     KEY_256_ASSIST_1(&temp1, &temp2);
     Key_Schedule[14]=temp1;
+
     #endif
 }
 
 #define AES256_NUM_ROUNDS	(14)
 
-void AES::encrypt_aesni(const uint8_t *input, uint8_t *output, const uint32_t *exp_key,
-		uint8_t *iv, uint64_t length)
+void aes_ctr_encdec_aesni(const uint8_t *input, uint8_t *output, const uint32_t *exp_key,
+		uint8_t *iv, uint64_t n)
 {
 	#ifdef __AMD64__
-	__m128i feedback, data;
 
-	if (length % 16) {
-		length = (length / 16) + 1;
-	} else {
-		length /=16;
-	}
+	__m128i ctr_block, tmp, ONE, BSWAP_EPI64;
 
-	// load initial iv
-	feedback = _mm_loadu_si128((__m128i*) iv);
+	ONE = _mm_set_epi32(0, 1, 0, 0);
+  BSWAP_EPI64 = _mm_setr_epi8(7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8);
 
-	for (uint32_t i = 0; i < length; ++i) {
-		data = _mm_loadu_si128(&((__m128i*) input)[i]);
-		feedback = _mm_xor_si128(data, feedback);
-		feedback = _mm_xor_si128(feedback,((__m128i*) exp_key)[0]);
+  // load counter
+  ctr_block = _mm_loadu_si128((const __m128i *) iv);
+  ctr_block = _mm_shuffle_epi8(ctr_block, BSWAP_EPI64); // ctr_block is held in big endian order
 
-		for (uint32_t j = 1; j < AES256_NUM_ROUNDS; ++j) {
-			feedback = _mm_aesenc_si128(feedback, ((__m128i*) exp_key)[j]);
-		}
-		feedback = _mm_aesenclast_si128(feedback, ((__m128i*) exp_key)[AES256_NUM_ROUNDS]);
-		
-		_mm_storeu_si128(&((__m128i *) output)[i], feedback);
-	}
+  for (int i = 0; i < (int) n; ++i) {
+    // copy counter to little endian (stored in tmp)
+    tmp = _mm_shuffle_epi8(ctr_block, BSWAP_EPI64);
 
-	_mm_storeu_si128(((__m128i *) iv), feedback);
+    tmp =_mm_xor_si128(tmp, ((const __m128i *) exp_key)[0]);
+    for (int j = 1; j < 14; ++j) {
+      tmp = _mm_aesenc_si128(tmp, ((const __m128i *) exp_key)[j]);
+    }
+    tmp = _mm_aesenclast_si128(tmp, ((const __m128i *) exp_key)[14]);
+    tmp = _mm_xor_si128(tmp, _mm_loadu_si128(&((const __m128i*) input)[i]));
+    _mm_storeu_si128(&((__m128i*) output)[i], tmp);
+
+    // increment counter
+    ctr_block = _mm_add_epi64(ctr_block, ONE);
+  }
+
+  // store iv
+  ctr_block = _mm_shuffle_epi8(ctr_block, BSWAP_EPI64);
+  _mm_storeu_si128((__m128i*) iv, ctr_block);
+
 	#endif
 }
-
-void AES::decrypt_aesni(const uint8_t *input, uint8_t *output, const uint32_t *exp_key,
-		uint8_t *iv, uint64_t length)
-{
-	#ifdef __AMD64__
-	__m128i data, feedback, last_in;
-
-	if (length % 16) {
-		length = (length / 16) + 1;
-	} else {
-		length /= 16;
-	}
-	
-	// load initial iv
-	feedback = _mm_loadu_si128((__m128i*) iv);
-	
-	for (uint32_t i = 0; i < length; ++i) {
-		last_in = _mm_loadu_si128(&((__m128i*) input)[i]);
-		data = _mm_xor_si128(last_in, ((__m128i*) exp_key)[0]);
-		
-		for(uint32_t j = 1; j < AES256_NUM_ROUNDS; ++j) {
-			data = _mm_aesdec_si128(data, ((__m128i*) exp_key)[j]);
-		}
-		data = _mm_aesdeclast_si128 (data, ((__m128i*) exp_key)[AES256_NUM_ROUNDS]);
-		data = _mm_xor_si128(data, feedback);
-		
-		_mm_storeu_si128(&((__m128i*) output)[i], data);
-		feedback = last_in;
-	}
-
-	_mm_storeu_si128((__m128i *) iv, feedback);
-	#endif
-}
-
