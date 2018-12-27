@@ -8,13 +8,29 @@
 #include <cstring>
 #include <unistd.h>
 
-#define BUFFER_SIZE     (1UL << 24)
+// 4 MB Buffer
+#define BUFFER_SIZE     (1UL << 20)
+
+// what kind of checksum shall be used
+// SHA1 means less security but better performance
+// use SHA256 for the reverse
+#define PERFORMANCE     SHA1
+#define SECURITY        SHA256
+#define CHECKSUM        PERFORMANCE
+
+// Macro used for hex dumping byte arrays
+/*
+#define HEX_DUMP(x, n)    for (int i = 0; i < (int) n; ++i) { \
+                            int _x = x[i]; \
+                            std::cout << std::hex << _x;} \
+                            std::cout << std::dec << std::endl;
+*/
 
 static size_t _read(uint8_t *ptr, uint32_t num_bytes, FILE *f) {
   size_t b = 0;
   while (num_bytes && !feof(f)) {
     auto bytes_read = fread(ptr, 1, num_bytes, f);
-    if (bytes_read < num_bytes && ferror(f)) {
+    if (bytes_read < num_bytes && !feof(f) && ferror(f)) {
       throw std::runtime_error("IO-Error occurred (input)");
     } else {
       num_bytes -= bytes_read;
@@ -49,21 +65,24 @@ static void encrypt_file(FILE *in, FILE *out, uint8_t *key, uint32_t *exp_key) {
   auto *buffer = (uint8_t*) malloc(BUFFER_SIZE);
   unsigned buffer_size = 0;
 
+  // threefold hashing
   SHA256::hash(key, AES_KEY_SIZE, buffer);
-  buffer_size = AES_KEY_SIZE;
+  SHA256::hash(buffer, SHA256::HASH_SIZE, buffer);
+  SHA256::hash(buffer, SHA256::HASH_SIZE, buffer);
+  buffer_size = SHA256::HASH_SIZE;
 
   // hash of file content
-  SHA1::context ctx;
-  SHA1::init(ctx);
+  CHECKSUM::context ctx;
+  CHECKSUM::init(ctx);
 
   // we attempt to fill up the buffer with as many bytes from input as possible
   // then the hash is updated and the full blocks of the input get encrypted
   // and written to output
   while (!feof(in)) {
-    buffer_size += _read(buffer + buffer_size, BUFFER_SIZE - buffer_size, in);
+    buffer_size += _read(buffer + buffer_size, (uint32_t) (BUFFER_SIZE - buffer_size), in);
 
     unsigned num_blocks = buffer_size / AES_BLOCK_SIZE;
-    SHA1::update(ctx, buffer, num_blocks * AES_BLOCK_SIZE);
+    CHECKSUM::update(ctx, buffer, num_blocks * AES_BLOCK_SIZE);
     aes_ctr_enc(buffer, buffer, exp_key, iv, num_blocks);
 
     _write(buffer, num_blocks * AES_BLOCK_SIZE, out);
@@ -75,10 +94,12 @@ static void encrypt_file(FILE *in, FILE *out, uint8_t *key, uint32_t *exp_key) {
       buffer[i] = buffer[(num_blocks * AES_BLOCK_SIZE) + i];
   }
 
-  // copy hash to buffer and flush it
-  SHA1::update(ctx, buffer, buffer_size);
-  SHA1::final(ctx, buffer + buffer_size);
+  // finish checksum to buffer
+  CHECKSUM::update(ctx, buffer, buffer_size);
+  CHECKSUM::final(ctx, buffer + buffer_size);
   buffer_size += SHA1::HASH_SIZE;
+
+  // encrypt checksum and remaining bytes in buffer
   aes_ctr_enc(buffer, buffer, exp_key, iv, 3);
   _write(buffer, buffer_size, out);
 }
@@ -86,38 +107,42 @@ static void encrypt_file(FILE *in, FILE *out, uint8_t *key, uint32_t *exp_key) {
 static void decrypt_file(FILE *in, FILE *out, uint8_t *key, uint32_t *exp_key) {
   uint8_t iv[AES_BLOCK_SIZE];
   if (_read(iv, AES_BLOCK_SIZE, in) < AES_BLOCK_SIZE) {
+    // unable to read iv from file due to not enough bytes available
     throw std::runtime_error("IO-Error occurred (filesize insufficient)");
   }
 
   auto *buffer = (uint8_t*) malloc(BUFFER_SIZE);
   unsigned buffer_size = 0;
 
-  if ((buffer_size = _read(buffer, SHA256::HASH_SIZE, in)) < SHA256::HASH_SIZE) {
+  if (_read(buffer, SHA256::HASH_SIZE, in) < SHA256::HASH_SIZE) {
+    // unable to read hash of key from file due to not enough bytes available
     throw std::runtime_error("IO-Error occurred (filesize insufficient)");
   }
 
   // check if the key hashes match
   uint8_t hash_of_key[AES_KEY_SIZE];
   SHA256::hash(key, AES_KEY_SIZE, hash_of_key);
+  SHA256::hash(hash_of_key, AES_KEY_SIZE, hash_of_key);
+  SHA256::hash(hash_of_key, AES_KEY_SIZE, hash_of_key);
   aes_ctr_dec(buffer, buffer, exp_key, iv, 2);
   if (memcmp(buffer, hash_of_key, AES_KEY_SIZE) != 0) {
     throw std::runtime_error("Invalid password!");
   }
 
-  SHA1::context ctx;
-  SHA1::init(ctx);
-  SHA1::update(ctx, hash_of_key, SHA256::HASH_SIZE);
+  CHECKSUM::context ctx;
+  CHECKSUM::init(ctx);
+  CHECKSUM::update(ctx, hash_of_key, SHA256::HASH_SIZE);
 
   // empty buffer
   buffer_size = 0;
 
   while (!feof(in)) {
-    buffer_size += _read(buffer + buffer_size, BUFFER_SIZE - buffer_size, in);
+    buffer_size += _read(buffer + buffer_size, (uint32_t) (BUFFER_SIZE - buffer_size), in);
 
     // do not treat the last 20 bytes as normal file content as it is the SHA-1 checksum
-    unsigned num_blocks = (buffer_size - SHA1::HASH_SIZE) / AES_BLOCK_SIZE;
+    unsigned num_blocks = (unsigned) (buffer_size - SHA1::HASH_SIZE) / AES_BLOCK_SIZE;
     aes_ctr_dec(buffer, buffer, exp_key, iv, num_blocks);
-    SHA1::update(ctx, buffer, num_blocks * AES_BLOCK_SIZE);
+    CHECKSUM::update(ctx, buffer, num_blocks * AES_BLOCK_SIZE);
 
     _write(buffer, num_blocks * AES_BLOCK_SIZE, out);
 
@@ -129,13 +154,15 @@ static void decrypt_file(FILE *in, FILE *out, uint8_t *key, uint32_t *exp_key) {
   }
 
   aes_ctr_dec(buffer, buffer, exp_key, iv, (buffer_size + 15) / AES_BLOCK_SIZE);
-  _write(buffer, buffer_size - SHA1::HASH_SIZE, out);
+  _write(buffer, (uint32_t) (buffer_size - SHA1::HASH_SIZE), out);
 
   // the last 20 bytes / 160 bit form the checksum
   uint8_t checksum[SHA1::HASH_SIZE];
-  SHA1::update(ctx, buffer, buffer_size - SHA1::HASH_SIZE);
-  SHA1::final(ctx, checksum);
+  CHECKSUM::update(ctx, buffer, buffer_size - SHA1::HASH_SIZE);
+  CHECKSUM::final(ctx, checksum);
 
+  // check if checksum in file matches the checksum computed from the decrypted file
+  // if they mismatch this maight be due to the file being corrupted or an error occurred
   if (memcmp(checksum, buffer + (buffer_size - SHA1::HASH_SIZE), SHA1::HASH_SIZE) != 0) {
     throw std::runtime_error("Checksum mismatch, file may be corrupted");
   }

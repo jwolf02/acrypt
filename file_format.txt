@@ -1,0 +1,10 @@
+Byte Address        Field Name
+0                   initialization vector (IV) used for starting the encryption (stored unencrypted)
+16                  triple SHA-256 hash of key, encrypted, also used in checksum computation
+48                  Encrypted file content, over the 'plainbytes' a SHA-1 checksum is computed
+                    Why SHA-1, it's unsafe? you might ask, your right, but we encrypt it and it is ~5 times
+                    faster than SHA-256, that's why! (Still not convinced? just change CHECKSUM in main.cpp to
+                    SECURITY and a SHA-256 checksum will be used (be aware to always use an apropriate program for decryption)
+48 + n              (n = #bytes in source file), SHA-1 checksum of file, stored encrypted
+
+Overhead 68 bytes (SHA-1 checksum), 80 bytes (SHA-256 checksum)
