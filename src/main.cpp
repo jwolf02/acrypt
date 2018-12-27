@@ -8,8 +8,8 @@
 #include <cstring>
 #include <unistd.h>
 
-// 4 MB Buffer
-#define BUFFER_SIZE     (1UL << 20)
+// 16 MB Buffer
+#define BUFFER_SIZE     (1UL << 24)
 
 // what kind of checksum shall be used
 // SHA1 means less security but better performance
