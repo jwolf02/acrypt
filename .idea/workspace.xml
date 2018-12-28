@@ -1,10 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="CMakeRunConfigurationManager" shouldGenerate="true" shouldDeleteObsolete="true">
-    <generated>
-      <config projectName="acrypt" targetName="acrypt" />
-      <config projectName="acrypt" targetName="test_suite" />
-    </generated>
+    <generated />
   </component>
   <component name="CMakeSettings">
     <configurations>
@@ -13,7 +10,12 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="8e3e641b-c17c-4a17-8909-bbaa34c38c03" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/acrypt.iml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/encodings.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/modules.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
     </list>
     <ignored path="$PROJECT_DIR$/cmake-build-debug/" />
     <ignored path="$PROJECT_DIR$/build/" />
@@ -37,7 +39,6 @@
     <expand />
     <select />
   </component>
-  <component name="ExecutionTargetManager" SELECTED_TARGET="CMakeBuildProfile:Release" />
   <component name="FileEditorManager">
     <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
       <file pinned="false" current-in-tab="false">
@@ -53,7 +54,7 @@
         <entry file="file://$PROJECT_DIR$/src/test.cpp">
           <provider selected="true" editor-type-id="text-editor">
             <state>
-              <caret line="36" column="2" lean-forward="true" selection-start-line="36" selection-start-column="2" selection-end-line="36" selection-end-column="2" />
+              <caret line="36" column="2" selection-start-line="36" selection-start-column="2" selection-end-line="36" selection-end-column="2" />
               <folding>
                 <element signature="e#0#19#0" expanded="true" />
                 <element signature="e#2327#2344#0" expanded="true" />
@@ -87,7 +88,7 @@
         <entry file="file://$PROJECT_DIR$/file_format.txt">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="119">
-              <caret line="7" column="89" lean-forward="true" selection-start-line="7" selection-start-column="89" selection-end-line="7" selection-end-column="89" />
+              <caret line="7" column="89" selection-start-line="7" selection-start-column="89" selection-end-line="7" selection-end-column="89" />
             </state>
           </provider>
         </entry>
@@ -179,28 +180,18 @@
     </option>
   </component>
   <component name="ProjectFrameBounds" extendedState="6">
-    <option name="x" value="1600" />
-    <option name="y" value="-2" />
+    <option name="y" value="25" />
     <option name="width" value="1920" />
-    <option name="height" value="1082" />
+    <option name="height" value="1055" />
   </component>
+  <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
   <component name="ProjectView">
     <navigator proportions="" version="1">
       <foldersAlwaysOnTop value="true" />
     </navigator>
     <panes>
       <pane id="Scope" />
-      <pane id="ProjectPane">
-        <subPane>
-          <expand>
-            <path>
-              <item name="acrypt" type="b2602c69:ProjectViewProjectNode" />
-              <item name="acrypt" type="462c0819:PsiDirectoryNode" />
-            </path>
-          </expand>
-          <select />
-        </subPane>
-      </pane>
+      <pane id="ProjectPane" />
     </panes>
   </component>
   <component name="PropertiesComponent">
@@ -222,21 +213,12 @@
       </list>
     </option>
   </component>
-  <component name="RunManager" selected="Application.test_suite">
-    <configuration name="acrypt" type="CMakeRunConfiguration" factoryName="Application" PROGRAM_PARAMS="--decrypt Jonas test.txt.enc test_cpy.txt" PASS_PARENT_ENVS_2="true" PROJECT_NAME="acrypt" TARGET_NAME="acrypt" CONFIG_NAME="Release" RUN_TARGET_PROJECT_NAME="acrypt" RUN_TARGET_NAME="acrypt">
+  <component name="RunManager">
+    <configuration name="acrypt" type="CMakeRunConfiguration" factoryName="Application" PROGRAM_PARAMS="--decrypt Jonas test.txt.enc test_cpy.txt" PASS_PARENT_ENVS_2="true" PROJECT_NAME="Project" TARGET_NAME="acrypt" CONFIG_NAME="Release" RUN_TARGET_PROJECT_NAME="Project" RUN_TARGET_NAME="acrypt">
       <method v="2">
         <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
       </method>
     </configuration>
-    <configuration name="test_suite" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="acrypt" TARGET_NAME="test_suite" CONFIG_NAME="Release" RUN_TARGET_PROJECT_NAME="acrypt" RUN_TARGET_NAME="test_suite">
-      <method v="2">
-        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
-      </method>
-    </configuration>
-    <list>
-      <item itemvalue="Application.acrypt" />
-      <item itemvalue="Application.test_suite" />
-    </list>
   </component>
   <component name="SvnConfiguration">
     <configuration />
@@ -251,7 +233,7 @@
       <workItem from="1545732400559" duration="16202000" />
       <workItem from="1545815251081" duration="16867000" />
       <workItem from="1545838134593" duration="3712000" />
-      <workItem from="1545905454355" duration="3523000" />
+      <workItem from="1545905454355" duration="3892000" />
     </task>
     <task id="LOCAL-00001" summary="Minor changes">
       <created>1545840228657</created>
@@ -271,7 +253,7 @@
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="40304000" />
+    <option name="totallyTimeSpent" value="40673000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="1600" y="-2" width="1920" height="1082" extended-state="6" />
@@ -419,7 +401,7 @@
     <entry file="file://$PROJECT_DIR$/src/test.cpp">
       <provider selected="true" editor-type-id="text-editor">
         <state>
-          <caret line="36" column="2" lean-forward="true" selection-start-line="36" selection-start-column="2" selection-end-line="36" selection-end-column="2" />
+          <caret line="36" column="2" selection-start-line="36" selection-start-column="2" selection-end-line="36" selection-end-column="2" />
           <folding>
             <element signature="e#0#19#0" expanded="true" />
             <element signature="e#2327#2344#0" expanded="true" />
@@ -440,7 +422,7 @@
     <entry file="file://$PROJECT_DIR$/file_format.txt">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="119">
-          <caret line="7" column="89" lean-forward="true" selection-start-line="7" selection-start-column="89" selection-end-line="7" selection-end-column="89" />
+          <caret line="7" column="89" selection-start-line="7" selection-start-column="89" selection-end-line="7" selection-end-column="89" />
         </state>
       </provider>
     </entry>
