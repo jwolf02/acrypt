@@ -56,26 +56,26 @@ const uint8_t sha256_test[SHA256::HASH_SIZE] = {
 
 // print bytes per second
 static void get_performance(clock_t diff) {
-  double bytes_per_sec = (double(N) * AES_BLOCK_SIZE) / (double(diff) / double(CLOCKS_PER_SEC));
-  std::cout << std::fixed << std::setprecision(2);
-  if (bytes_per_sec >= 1000000000.0) {
-    std::cout << (bytes_per_sec / 1000000000.0) << " GB/s" << std::endl;
-  } else if (bytes_per_sec >= 1000000.0) {
-    std::cout << (bytes_per_sec / 1000000.0) << " MB/s" << std::endl;
-  } else if (bytes_per_sec >= 1000.0) {
-    std::cout << (bytes_per_sec / 1000.0) << " kB/s" << std::endl;
-  } else {
-    std::cout << bytes_per_sec << " B/s" << std::endl;
-  }
+    double bytes_per_sec = (double(N) * AES_BLOCK_SIZE) / (double(diff) / double(CLOCKS_PER_SEC));
+    std::cout << std::fixed << std::setprecision(2);
+    if (bytes_per_sec >= 1000000000.0) {
+        std::cout << (bytes_per_sec / 1000000000.0) << " GB/s" << std::endl;
+    } else if (bytes_per_sec >= 1000000.0) {
+        std::cout << (bytes_per_sec / 1000000.0) << " MB/s" << std::endl;
+    } else if (bytes_per_sec >= 1000.0) {
+        std::cout << (bytes_per_sec / 1000.0) << " kB/s" << std::endl;
+    } else {
+        std::cout << bytes_per_sec << " B/s" << std::endl;
+    }
 }
 
 // test performance
 template <typename func_t>
 static void test(func_t func) {
-  clock_t begin = clock();
-  func();
-  clock_t end = clock();
-  get_performance(end - begin);
+    clock_t begin = clock();
+    func();
+    clock_t end = clock();
+    get_performance(end - begin);
 }
 
 uint8_t exp_key[AES_EXP_KEY_SIZE];
@@ -83,80 +83,80 @@ uint8_t tmp[AES_BLOCK_SIZE];
 uint8_t iv[AES_BLOCK_SIZE];
 uint8_t digest[SHA256::HASH_SIZE];
 
-int main() {
-  // allocate 1GB of memory
-  auto *buffer = (uint8_t*) malloc(N * AES_BLOCK_SIZE);
+int main(int argc, const char *argv[]) {
+    // allocate 1GB of memory
+    auto *buffer = (uint8_t*) malloc(N * AES_BLOCK_SIZE);
 
-  std::cout << "acrypt AES-256 CTR / SHA-1 / SHA-256 Test Suite" << std::endl << std::endl;
+    std::cout << "acrypt AES-256 CTR / SHA-1 / SHA-256 Test Suite" << std::endl << std::endl;
 
-  std::cout << "hardware support: ";
-  if (aes_has_cpu_support())
-    std::cout << "enabled";
-  else
-    std::cout << "disabled";
-  std::cout << std::endl << std::endl;
+    std::cout << "hardware support: ";
+    if (aes_has_cpu_support())
+        std::cout << "enabled";
+    else
+        std::cout << "disabled";
+    std::cout << std::endl << std::endl;
 
-  std::cout << "Cipher test" << std::endl;
+    std::cout << "Cipher test" << std::endl;
 
-  std::cout << "Generic: \t" << std::flush;
-  aes_ctr_expand_key_generic(key, (uint32_t*) exp_key);
-  memcpy(iv, counter, AES_BLOCK_SIZE);
-  aes_ctr_encdec_generic(plaintext, tmp, (uint32_t*) exp_key, iv, 1);
-  if (memcmp(tmp, ciphertext, AES_BLOCK_SIZE) == 0)
-    std::cout << "successful" << std::endl;
-  else
-    std::cout << "failed" << std::endl;
+    std::cout << "Generic: \t" << std::flush;
+    aes_ctr_expand_key_generic(key, (uint32_t*) exp_key);
+    memcpy(iv, counter, AES_BLOCK_SIZE);
+    aes_ctr_encdec_generic(plaintext, tmp, (uint32_t*) exp_key, iv, 1);
+    if (memcmp(tmp, ciphertext, AES_BLOCK_SIZE) == 0)
+        std::cout << "successful" << std::endl;
+    else
+        std::cout << "failed" << std::endl;
 
-  IF_HARDWARE_SUPPORT
+    IF_HARDWARE_SUPPORT
 
-  std::cout << "AES-NI: \t" << std::flush;
-  aes_ctr_expand_key_aesni(key, (uint32_t*) exp_key);
-  memcpy(iv, counter, AES_BLOCK_SIZE);
-  aes_ctr_encdec_aesni(plaintext, tmp, (uint32_t*) exp_key, iv, 1);
-  if (memcmp(tmp, ciphertext, AES_BLOCK_SIZE) == 0)
-    std::cout << "successful" << std::endl;
-  else
-    std::cout << "failed" << std::endl;
+        std::cout << "AES-NI: \t" << std::flush;
+        aes_ctr_expand_key_aesni(key, (uint32_t*) exp_key);
+        memcpy(iv, counter, AES_BLOCK_SIZE);
+        aes_ctr_encdec_aesni(plaintext, tmp, (uint32_t*) exp_key, iv, 1);
+        if (memcmp(tmp, ciphertext, AES_BLOCK_SIZE) == 0)
+            std::cout << "successful" << std::endl;
+        else
+            std::cout << "failed" << std::endl;
 
-  ENDIF_HARDWARE_SUPPORT
+    ENDIF_HARDWARE_SUPPORT
 
-  std::cout << std::endl << "Hash test" << std::endl;
+    std::cout << std::endl << "Hash test" << std::endl;
 
-  std::cout << "SHA-1:   \t" << std::flush;
-  SHA1::hash("abc", 3, digest);
-  if (memcmp(digest, sha1_test, SHA1::HASH_SIZE) == 0)
-    std::cout << "successful" << std::endl;
-  else
-    std::cout << "failed" << std::endl;
+    std::cout << "SHA-1:   \t" << std::flush;
+    SHA1::hash("abc", 3, digest);
+    if (memcmp(digest, sha1_test, SHA1::HASH_SIZE) == 0)
+        std::cout << "successful" << std::endl;
+    else
+        std::cout << "failed" << std::endl;
 
-  std::cout << "SHA-256: \t" << std::flush;
-  SHA256::hash("abc", 3, digest);
-  if (memcmp(digest, sha256_test, SHA256::HASH_SIZE) == 0)
-    std::cout << "successful" << std::endl;
-  else
-    std::cout << "failed" << std::endl;
+    std::cout << "SHA-256: \t" << std::flush;
+    SHA256::hash("abc", 3, digest);
+    if (memcmp(digest, sha256_test, SHA256::HASH_SIZE) == 0)
+        std::cout << "successful" << std::endl;
+    else
+        std::cout << "failed" << std::endl;
 
-  std::cout << std::endl << "Performance test" << std::endl;
+    std::cout << std::endl << "Performance test" << std::endl;
 
-  std::cout << "Generic: \t" << std::flush;
-  aes_ctr_expand_key_generic(key, (uint32_t*) exp_key);
-  test([&](){ aes_ctr_encdec_generic(buffer, buffer, (uint32_t*) exp_key, iv, N); });
+    std::cout << "Generic: \t" << std::flush;
+    aes_ctr_expand_key_generic(key, (uint32_t*) exp_key);
+    test([&](){ aes_ctr_encdec_generic(buffer, buffer, (uint32_t*) exp_key, iv, N); });
 
-  IF_HARDWARE_SUPPORT
+    IF_HARDWARE_SUPPORT
 
-  std::cout << "AES-NI: \t" << std::flush;
-  aes_ctr_expand_key_aesni(key, (uint32_t*) exp_key);
-  test([&](){ aes_ctr_encdec_aesni(buffer, buffer, (uint32_t*) exp_key, iv, N); });
+        std::cout << "AES-NI: \t" << std::flush;
+        aes_ctr_expand_key_aesni(key, (uint32_t*) exp_key);
+        test([&](){ aes_ctr_encdec_aesni(buffer, buffer, (uint32_t*) exp_key, iv, N); });
 
-  ENDIF_HARDWARE_SUPPORT
+    ENDIF_HARDWARE_SUPPORT
 
-  std::cout << "SHA-1:   \t" << std::flush;
-  test([&](){ SHA1::hash(buffer, N * AES_BLOCK_SIZE, digest); });
+    std::cout << "SHA-1:   \t" << std::flush;
+    test([&](){ SHA1::hash(buffer, N * AES_BLOCK_SIZE, digest); });
 
-  std::cout << "SHA-256: \t" << std::flush;
-  test([&](){ SHA256::hash(buffer, N * AES_BLOCK_SIZE, digest); });
+    std::cout << "SHA-256: \t" << std::flush;
+    test([&](){ SHA256::hash(buffer, N * AES_BLOCK_SIZE, digest); });
 
-  free(buffer);
+    free(buffer);
 
-  return 0;
+    return 0;
 }
