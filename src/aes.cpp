@@ -310,7 +310,7 @@ void aes_ctr_encdec_generic(const uint8_t *input, uint8_t *output, const uint32_
 {
     for (uint64_t i = 0; i < n; ++i) {
       // load counter
-      uint64_t xor_key[2] = {
+      const uint64_t xor_key[2] = {
               ((uint64_t *) iv)[0],
               ((uint64_t *) iv)[1]
       };
@@ -414,35 +414,35 @@ void aes_ctr_encdec_aesni(const uint8_t *input, uint8_t *output, const uint32_t 
 	__m128i ctr_block, tmp0, tmp1;
 
 	const __m128i ONE = _mm_set_epi32(0, 1, 0, 0);
-  const __m128i BSWAP_EPI64 = _mm_setr_epi8(7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8);
+    const __m128i BSWAP_EPI64 = _mm_setr_epi8(7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8);
 
-  ctr_block = _mm_loadu_si128((const __m128i *) iv);
-  ctr_block = _mm_shuffle_epi8(ctr_block, BSWAP_EPI64);
+    ctr_block = _mm_loadu_si128((const __m128i *) iv);
+    ctr_block = _mm_shuffle_epi8(ctr_block, BSWAP_EPI64);
 
-  // Running 2 blocks in parallel exploiting instruction level parallelism
-  int c = 0;
-  for (int i = 0; i < (int) n; i += 2) {
-    tmp0 = _mm_shuffle_epi8(ctr_block, BSWAP_EPI64);
-    ctr_block = _mm_add_epi64(ctr_block, ONE);
-    tmp1 = _mm_shuffle_epi8(ctr_block, BSWAP_EPI64);
-    ctr_block = _mm_add_epi64(ctr_block, ONE);
+    // Running 2 blocks in parallel exploiting instruction level parallelism
+    int c = 0;
+    for (int i = 0; i < (int) n; i += 2) {
+        tmp0 = _mm_shuffle_epi8(ctr_block, BSWAP_EPI64);
+        ctr_block = _mm_add_epi64(ctr_block, ONE);
+        tmp1 = _mm_shuffle_epi8(ctr_block, BSWAP_EPI64);
+        ctr_block = _mm_add_epi64(ctr_block, ONE);
 
-    tmp0 =_mm_xor_si128(tmp0, ((const __m128i *) exp_key)[0]);
-    tmp1 =_mm_xor_si128(tmp1, ((const __m128i *) exp_key)[0]);
+        tmp0 =_mm_xor_si128(tmp0, ((const __m128i *) exp_key)[0]);
+        tmp1 =_mm_xor_si128(tmp1, ((const __m128i *) exp_key)[0]);
 
-    for (int j = 1; j < 14; ++j) {
-      tmp0 = _mm_aesenc_si128(tmp0, ((const __m128i *) exp_key)[j]);
-      tmp1 = _mm_aesenc_si128(tmp1, ((const __m128i *) exp_key)[j]);
-    }
-    tmp0 = _mm_aesenclast_si128(tmp0, ((const __m128i *) exp_key)[14]);
-    tmp1 = _mm_aesenclast_si128(tmp1, ((const __m128i *) exp_key)[14]);
-    tmp0 = _mm_xor_si128(tmp0, _mm_loadu_si128(&((const __m128i*) input)[i]));
-    tmp1 = _mm_xor_si128(tmp1, _mm_loadu_si128(&((const __m128i*) input)[i + 1]));
+        for (int j = 1; j < 14; ++j) {
+            tmp0 = _mm_aesenc_si128(tmp0, ((const __m128i *) exp_key)[j]);
+            tmp1 = _mm_aesenc_si128(tmp1, ((const __m128i *) exp_key)[j]);
+        }
+        tmp0 = _mm_aesenclast_si128(tmp0, ((const __m128i *) exp_key)[14]);
+        tmp1 = _mm_aesenclast_si128(tmp1, ((const __m128i *) exp_key)[14]);
+        tmp0 = _mm_xor_si128(tmp0, _mm_loadu_si128(&((const __m128i*) input)[i]));
+        tmp1 = _mm_xor_si128(tmp1, _mm_loadu_si128(&((const __m128i*) input)[i + 1]));
 
-    _mm_storeu_si128(&((__m128i*) output)[i], tmp0);
-    _mm_storeu_si128(&((__m128i*) output)[i + 1], tmp1);
+        _mm_storeu_si128(&((__m128i*) output)[i], tmp0);
+        _mm_storeu_si128(&((__m128i*) output)[i + 1], tmp1);
 
-    c += 2;
+        c += 2;
   }
 
   if (n & 1) {

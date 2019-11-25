@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.6)
 
 project(acrypt LANGUAGES 	CXX)
 
-set(CMAKE_CXX_STANDART		11)
+set(CMAKE_CXX_STANDARD		11)
 
 set(CMAKE_CXX_FLAGS	"${CMAKE_CXX_FLAGS} -Wall -O3 -pedantic -march=native -mtune=native -maes")
 
@@ -17,7 +17,7 @@ set(LIB_SOURCES 	src/sha1.hpp
 
 # crypt executable files
 set(ACRYPT_SOURCES	${LIB_SOURCES}
-					src/main.cpp)
+					src/main.cpp src/utils.hpp)
 
 # test suite files
 set(TEST_SOURCES	${LIB_SOURCES}
