@@ -62,7 +62,7 @@ static size_t _write(const uint8_t *ptr, uint32_t num_bytes, FILE *f) {
 static uint64_t get_buffersize(const std::string &str) {
     if (!isdigit(str.back())) {
         auto str1 = str.substr(0, str.size() - 1);
-        uint64_t mult = 1;
+        uint64_t mult;
         switch (str.back()) {
             case 'M': {
                 mult = 1000000;
