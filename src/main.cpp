@@ -266,7 +266,6 @@ int main(int argc, const char *argv[]) {
         } else if (starts_with(arg, "-f")) {
             password = read_password(args[i + 1]);
             i += 1;
-            std::cerr << password << std::endl;
             continue;
         } else {
             std::cerr << "unrecognized argument '" << arg << '\'' << std::endl;
