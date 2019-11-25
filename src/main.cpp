@@ -210,8 +210,8 @@ static void print_help() {
   std::cout << "--encrypt, -e                encrpytion mode" << std::endl;
   std::cout << "--decrypt, -d                decryption mode" << std::endl;
   std::cout << "--buffersize=SIZE, -bs SIZE  set buffer size (e.g. -bs 4M)" << std::endl;
-  std::cout << "--password=PASS, -p PASS     set password, if not password specified then"
-            << "                             prompt opens and it can be entered safely" << std::endl;
+  std::cout << "--password=PASS, -p PASS     set password, if no password is specified then" << std::endl
+            << "                             a prompt opens and it can be entered safely" << std::endl;
   std::cout << "--file=FILE, -f FILE         read plain text password from file" << std::endl;
 }
 
