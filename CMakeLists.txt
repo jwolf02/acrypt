@@ -1,5 +1,4 @@
 cmake_minimum_required(VERSION 3.6)
-
 project(acrypt LANGUAGES 	CXX)
 
 set(CMAKE_CXX_STANDARD		11)

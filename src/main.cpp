@@ -9,10 +9,10 @@
 #include <utils.hpp>
 #include <fstream>
 
-#define ENCRYPT         0
-#define DECRYPT         1
+#define ENCRYPT             0
+#define DECRYPT             1
 
-#define BUFFER_SIZE     (32000)
+#define DEFAULT_BUF_SIZE    (32000)
 
 // what kind of checksum shall be used
 // SHA1 means less security but better performance
@@ -82,14 +82,18 @@ static uint64_t get_buffersize(const std::string &str) {
 }
 
 static std::string read_password(const std::string &fname) {
-    std::ifstream file(fname);
-    if (!file) {
-        std::cerr << "unable to open password file" << std::endl;
+    std::string contents;
+    std::ifstream in(fname);
+    if (!in) {
+        std::cerr << "unable to read password from file" << std::endl;
         exit(EXIT_FAILURE);
     }
-
-    return std::string((std::istreambuf_iterator<char>(file)),
-                  (std::istreambuf_iterator<char>()));
+    in.seekg(0, std::ios::end);
+    contents.resize(in.tellg());
+    in.seekg(0, std::ios::beg);
+    in.read((char *) contents.data(), contents.size());
+    in.close();
+    return contents;
 }
 
 static void encrypt_file(FILE *in, FILE *out, uint8_t *key, uint32_t *exp_key, uint64_t bufsize) {
@@ -115,9 +119,9 @@ static void encrypt_file(FILE *in, FILE *out, uint8_t *key, uint32_t *exp_key, u
     // then the hash is updated and the full blocks of the input get encrypted
     // and written to output
     while (!feof(in)) {
-        buffer_size += _read(buffer + buffer_size, (uint32_t) (BUFFER_SIZE - buffer_size), in);
+        buffer_size += _read(buffer + buffer_size, (uint32_t) (bufsize - buffer_size), in);
 
-        unsigned num_blocks = buffer_size / AES_BLOCK_SIZE;
+        const unsigned num_blocks = buffer_size / AES_BLOCK_SIZE;
         CHECKSUM::update(ctx, buffer, num_blocks * AES_BLOCK_SIZE);
         aes_ctr_enc(buffer, buffer, exp_key, iv, num_blocks);
 
@@ -126,8 +130,9 @@ static void encrypt_file(FILE *in, FILE *out, uint8_t *key, uint32_t *exp_key, u
         // reduce buffer size and copy leftover bytes (those that did not form a complete block)
         // to the beginning of the buffer
         buffer_size -= num_blocks * AES_BLOCK_SIZE;
-        for (int i = 0; i < (int) buffer_size; ++i)
+        for (int i = 0; i < (int) buffer_size; ++i) {
             buffer[i] = buffer[(num_blocks * AES_BLOCK_SIZE) + i];
+        }
     }
 
     // finish checksum to buffer
@@ -173,10 +178,10 @@ static void decrypt_file(FILE *in, FILE *out, uint8_t *key, uint32_t *exp_key, u
     buffer_size = 0;
 
     while (!feof(in)) {
-        buffer_size += _read(buffer + buffer_size, (uint32_t) (BUFFER_SIZE - buffer_size), in);
+        buffer_size += _read(buffer + buffer_size, (uint32_t) (bufsize - buffer_size), in);
 
         // do not treat the last 20 bytes as normal file content as it is the SHA-1 checksum
-        unsigned num_blocks = (unsigned) (buffer_size - SHA1::HASH_SIZE) / AES_BLOCK_SIZE;
+        const unsigned num_blocks = (unsigned) (buffer_size - SHA1::HASH_SIZE) / AES_BLOCK_SIZE;
         aes_ctr_dec(buffer, buffer, exp_key, iv, num_blocks);
         CHECKSUM::update(ctx, buffer, num_blocks * AES_BLOCK_SIZE);
 
@@ -185,8 +190,9 @@ static void decrypt_file(FILE *in, FILE *out, uint8_t *key, uint32_t *exp_key, u
         // reduce buffer size and copy leftover bytes (those that did not form a complete block and possible hash bytes)
         // to the beginning of the buffer
         buffer_size -= num_blocks * AES_BLOCK_SIZE;
-        for (int i = 0; i < (int) buffer_size; ++i)
+        for (int i = 0; i < (int) buffer_size; ++i) {
             buffer[i] = buffer[(num_blocks * AES_BLOCK_SIZE) + i];
+        }
     }
 
     aes_ctr_dec(buffer, buffer, exp_key, iv, (buffer_size + 15) / AES_BLOCK_SIZE);
@@ -207,6 +213,7 @@ static void decrypt_file(FILE *in, FILE *out, uint8_t *key, uint32_t *exp_key, u
 static void print_help() {
   std::cout << "acrypt [options...] <input file> <output file>" << std::endl;
   std::cout << "options:" << std::endl;
+  std::cout << "if \'-\' is given as a filename, STDIN/STOUT is used " << std::endl;
   std::cout << "--encrypt, -e                encrpytion mode" << std::endl;
   std::cout << "--decrypt, -d                decryption mode" << std::endl;
   std::cout << "--buffersize=SIZE, -bs SIZE  set buffer size (e.g. -bs 4M)" << std::endl;
@@ -227,7 +234,7 @@ int main(int argc, const char *argv[]) {
 
     int mode = -1;
     std::string password;
-    uint64_t buffer_size = BUFFER_SIZE;
+    uint64_t buffer_size = DEFAULT_BUF_SIZE;
 
     for (size_t i = 1; i < args.size() - 2; ++i) {
         const auto &arg = args[i];
@@ -278,7 +285,7 @@ int main(int argc, const char *argv[]) {
     }
 
     if (buffer_size < 256) {
-        std::cerr << "invalid buffer size" << std::endl;
+        std::cerr << "invalid buffer size \'" << buffer_size << "\', must be at least 256 Bytes" << std::endl;
         return EXIT_FAILURE;
     }
 
@@ -287,6 +294,10 @@ int main(int argc, const char *argv[]) {
 
     // get password
     if (password.empty()) {
+        if (input_filename == "-") {
+            std::cerr << "cannot read password when using STDIN as input" << std::endl;
+            return EXIT_FAILURE;
+        }
         // prompt the user
         const std::string passwd(getpass("enter password: "));
         const std::string confrm(getpass("confirm password: "));
@@ -297,6 +308,9 @@ int main(int argc, const char *argv[]) {
             password = passwd;
         }
     }
+
+    // do a little bit of salting
+    password = "################" + password + "++++++++++++++++";
 
     // compute key from password
     uint8_t key[SHA256::HASH_SIZE];

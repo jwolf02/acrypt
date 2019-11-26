@@ -6,30 +6,6 @@
 #include <cstddef>
 #include <cstdint>
 
-namespace None {
-
-    constexpr uint64_t HASH_SIZE = 0;
-
-    typedef struct{} context;
-
-    inline void init(context &ctx) {
-        return;
-    }
-
-    inline void update(context &ctx, const void *data, size_t len) {
-        return;
-    }
-
-    inline void final(context &ctx, void *digest) {
-        return;
-    }
-
-    inline void hash(const void *data, size_t len, void *digest) {
-        return;
-    }
-
-} // namespace None
-
 namespace SHA256 {
 
 	constexpr uint64_t HASH_SIZE = 32;

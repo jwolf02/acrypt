@@ -10,10 +10,7 @@
 #include <tmmintrin.h>
 #endif
 
-typedef uint8_t uint8;
-typedef uint32_t uint32;
-
-static const uint32_t RCON[10] = {
+static constexpr uint32_t RCON[10] = {
         0x01000000, 0x02000000, 0x04000000, 0x08000000,
         0x10000000, 0x20000000, 0x40000000, 0x80000000,
         0x1B000000, 0x36000000
@@ -21,7 +18,7 @@ static const uint32_t RCON[10] = {
 
 /* forward s-box */
 
-static const uint32_t FSb[256] = {
+static constexpr uint32_t FSb[256] = {
          0x63, 0x7C, 0x77, 0x7B, 0xF2, 0x6B, 0x6F, 0xC5,
          0x30, 0x01, 0x67, 0x2B, 0xFE, 0xD7, 0xAB, 0x76,
          0xCA, 0x82, 0xC9, 0x7D, 0xFA, 0x59, 0x47, 0xF0,
@@ -126,26 +123,26 @@ static const uint32_t FSb[256] = {
     V(7B,B0,B0,CB), V(A8,54,54,FC), V(6D,BB,BB,D6), V(2C,16,16,3A)
 
 #define V(a,b,c,d) 0x##a##b##c##d
-static const uint32_t FT0[256] = { FT };
+static constexpr uint32_t FT0[256] = { FT };
 #undef V
 
 #define V(a,b,c,d) 0x##d##a##b##c
-static const uint32_t FT1[256] = { FT };
+static constexpr uint32_t FT1[256] = { FT };
 #undef V
 
 #define V(a,b,c,d) 0x##c##d##a##b
-static const uint32_t FT2[256] = { FT };
+static constexpr uint32_t FT2[256] = { FT };
 #undef V
 
 #define V(a,b,c,d) 0x##b##c##d##a
-static const uint32_t FT3[256] = { FT };
+static constexpr uint32_t FT3[256] = { FT };
 #undef V
 
 #undef FT
 
 /* super fast platform independent byte getter and setter */
 
-#if defined(__AMD64__) && defined(__GNUC__)
+#if defined(__GNUC__)
 #define GET_UINT32(n,b,i)	(n) = __builtin_bswap32(((const uint32_t *) b)[i >> 2])
 #else
 #define GET_UINT32(n,b,i)                       \
@@ -157,7 +154,7 @@ static const uint32_t FT3[256] = { FT };
 }
 #endif
 
-#if defined(__AMD64__) && defined(__GNUC__)
+#if defined(__GNUC__)
 #define PUT_UINT32(n,b,i)	((uint32_t *) b)[i >> 2] = __builtin_bswap32(n)
 #else
 #define PUT_UINT32(n,b,i)                       \
@@ -316,7 +313,7 @@ void aes_ctr_encdec_generic(const uint8_t *input, uint8_t *output, const uint32_
       };
 
       // encrypt counter
-      encrypt_block(exp_key, (uint8_t*) xor_key);
+      encrypt_block(exp_key, (uint8_t *) xor_key);
 
       // xor input with encrypted counter and write result to output
       ((uint64_t*) output)[0] = ((const uint64_t*) input)[0] ^ xor_key[0];

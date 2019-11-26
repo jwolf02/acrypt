@@ -66,7 +66,10 @@ static void SHA1Transform(
 #ifdef SHA1HANDSOFF
   CHAR64LONG16 block[1];      /* use array to appear as a pointer */
 
-  memcpy(block, buffer, 64);
+  //memcpy(block, buffer, 64);
+  for (int i = 0; i < 16; ++i) {
+      block->l[i] = ((uint32_t *) buffer)[i];
+  }
 #else
   /* The following had better never be used because it causes the
      * pointer-to-const buffer to be cast into a pointer to non-const.
@@ -171,7 +174,7 @@ static void SHA1Transform(
   /* Wipe variables */
   a = b = c = d = e = 0;
 #ifdef SHA1HANDSOFF
-  memset(block, '\0', sizeof(block));
+  //memset(block, '\0', sizeof(block));
 #endif
 }
 
