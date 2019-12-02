@@ -2,17 +2,18 @@
 #include <aes.hpp>
 #include <cstdlib>
 #include <string>
-#include <hash.hpp>
+#include <Hash.hpp>
 #include <cstdio>
 #include <cstring>
 #include <unistd.h>
 #include <utils.hpp>
 #include <fstream>
+#include <array>
 
-#define ENCRYPT             0
-#define DECRYPT             1
+#define ENCRYPTION              0
+#define DECRYPTION              1
 
-#define DEFAULT_BUF_SIZE    (32000)
+#define DEFAULT_BUF_SIZE        (1000 * AES_BLOCK_SIZE)
 
 // what kind of checksum shall be used
 // SHA1 means less security but better performance
@@ -59,6 +60,12 @@ static size_t _write(const uint8_t *ptr, uint32_t num_bytes, FILE *f) {
     return b;
 }
 
+static bool iequals(const std::string &str1, const std::string &str2) {
+    return str2.size() == str2.size() ? std::equal(str1.begin(), str1.end(), str2.begin(), [](char a, char b) -> bool {
+        return std::tolower(a) == std::tolower(b);
+    }) : false;
+}
+
 static uint64_t get_buffersize(const std::string &str) {
     if (!isdigit(str.back())) {
         auto str1 = str.substr(0, str.size() - 1);
@@ -96,11 +103,7 @@ static std::string read_password(const std::string &fname) {
     return contents;
 }
 
-static void encrypt_file(FILE *in, FILE *out, uint8_t *key, uint32_t *exp_key, uint64_t bufsize) {
-    uint8_t iv[AES_BLOCK_SIZE];
-    aes_generate_iv(iv);
-    _write(iv, AES_BLOCK_SIZE, out);
-
+static void encrypt_file(uint8_t *iv, FILE *in, FILE *out, uint8_t *key, uint32_t *exp_key, uint64_t bufsize) {
     // allocate buffer
     auto *buffer = (uint8_t*) malloc(bufsize);
     unsigned buffer_size = 0;
@@ -145,13 +148,8 @@ static void encrypt_file(FILE *in, FILE *out, uint8_t *key, uint32_t *exp_key, u
     _write(buffer, buffer_size, out);
 }
 
-static void decrypt_file(FILE *in, FILE *out, uint8_t *key, uint32_t *exp_key, uint64_t bufsize) {
-    uint8_t iv[AES_BLOCK_SIZE];
-    if (_read(iv, AES_BLOCK_SIZE, in) < AES_BLOCK_SIZE) {
-        // unable to read iv from file due to not enough bytes available
-        throw std::runtime_error("insufficient file size");
-    }
-
+static void decrypt_file(uint8_t *iv, FILE *in, FILE *out, uint8_t *key, uint32_t *exp_key, uint64_t bufsize) {
+    // allocate buffer
     auto *buffer = (uint8_t*) malloc(bufsize);
     unsigned buffer_size = 0;
 
@@ -167,7 +165,7 @@ static void decrypt_file(FILE *in, FILE *out, uint8_t *key, uint32_t *exp_key, u
     SHA256::hash(hash_of_key, AES_KEY_SIZE, hash_of_key);
     aes_ctr_dec(buffer, buffer, exp_key, iv, 2);
     if (memcmp(buffer, hash_of_key, AES_KEY_SIZE) != 0) {
-        throw std::runtime_error("invalid password");
+        throw std::runtime_error("invalid password or compromised iv");
     }
 
     CHECKSUM::context ctx;
@@ -220,6 +218,8 @@ static void print_help() {
   std::cout << "--password=PASS, -p PASS     set password, if no password is specified then" << std::endl
             << "                             a prompt opens and it can be entered safely" << std::endl;
   std::cout << "--file=FILE, -f FILE         read plain text password from file" << std::endl;
+  std::cout << "--hash=HASH, -h HASH         set the type of hash to be used for computing the checksum { none, sha1, sha256 }"<< std::endl
+            << "                             default is --hash=sha1" << std::endl;
 }
 
 int main(int argc, const char *argv[]) {
@@ -235,14 +235,15 @@ int main(int argc, const char *argv[]) {
     int mode = -1;
     std::string password;
     uint64_t buffer_size = DEFAULT_BUF_SIZE;
+    auto hash = Hash::SHA256;
 
     for (size_t i = 1; i < args.size() - 2; ++i) {
         const auto &arg = args[i];
         if (starts_with(arg, "--encrypt") || starts_with(arg, "-e")) {
-            mode = ENCRYPT;
+            mode = ENCRYPTION;
             continue;
         } else if (starts_with(arg, "--decrypt") || starts_with(arg, "-d")) {
-            mode = DECRYPT;
+            mode = DECRYPTION;
             continue;
         } else if (starts_with(arg, "--password=")) {
             auto tokens = split(arg, "=");
@@ -274,6 +275,32 @@ int main(int argc, const char *argv[]) {
             password = read_password(args[i + 1]);
             i += 1;
             continue;
+        } else if (starts_with(arg, "--hash=")) {
+            auto tokens = split(arg, "=");
+            if (tokens.size() == 2) {
+                if (tokens[1] == "none") {
+                    hash = Hash::NONE;
+                } else if (tokens[1] == "sha1") {
+                    hash = Hash::SHA1;
+                } else if (tokens[1] == "sha256") {
+                    hash = Hash::SHA256;
+                } else {
+                    std::cerr << "unrecognized hash type '" << tokens[1] << '\'' << std::endl;
+                }
+            }
+            continue;
+        } else if (starts_with(arg, "-h")) {
+            if (args[i + 1] == "none") {
+                hash = Hash::NONE;
+            } else if (args[i + 1] == "sha1") {
+                hash = Hash::SHA1;
+            } else if (args[i + 1] == "sha256") {
+                hash = Hash::SHA256;
+            } else {
+                std::cerr << "unrecognized hash type '" << args[i + 1] << '\'' << std::endl;
+            }
+            i += 1;
+            continue;
         } else {
             std::cerr << "unrecognized argument '" << arg << '\'' << std::endl;
         }
@@ -289,6 +316,7 @@ int main(int argc, const char *argv[]) {
         return EXIT_FAILURE;
     }
 
+    // rename filenames
     const std::string input_filename(argv[argc - 2]);
     const std::string output_filename(argv[argc - 1]);
 
@@ -301,6 +329,10 @@ int main(int argc, const char *argv[]) {
         // prompt the user
         const std::string passwd(getpass("enter password: "));
         const std::string confrm(getpass("confirm password: "));
+        if (passwd.empty()) {
+            std::cerr << "empty password is not allowed" << std::endl;
+            exit(EXIT_FAILURE);
+        }
         if (passwd != confrm) {
             std::cerr << "passwords mismatch" << std::endl;
             exit(EXIT_FAILURE);
@@ -309,21 +341,6 @@ int main(int argc, const char *argv[]) {
         }
     }
 
-    // do a little bit of salting
-    password = "################" + password + "++++++++++++++++";
-
-    // compute key from password
-    uint8_t key[SHA256::HASH_SIZE];
-    SHA256::hash(password.data(), password.size(), key);
-
-    for (int i = 1; i < 8192; ++i) {
-        SHA256::hash(key, 32, key);
-    }
-
-    // expand key
-    uint8_t exp_key[AES_EXP_KEY_SIZE];
-    aes_ctr_expand_key(key, (uint32_t*) exp_key);
-
     // open input file, if filename=="-" use stdin
     FILE *in = input_filename != "-" ? fopen(input_filename.c_str(), "rb") : stdin;
     if (in == nullptr) {
@@ -331,18 +348,56 @@ int main(int argc, const char *argv[]) {
         exit(EXIT_FAILURE);
     }
 
+    // open output file, if filename=="-" use stdout
     FILE *out = output_filename != "-" ? fopen(output_filename.c_str(), "wb") : stdout;
     if (out == nullptr) {
         std::cerr << "unable to open output file" << std::endl;
         exit(EXIT_FAILURE);
     }
 
+    // generate 16 Byte IV that is also used as a password salt
+    std::array<uint8_t, AES_BLOCK_SIZE> iv = { 0 };
+    if (mode == ENCRYPTION) {
+        aes_generate_iv(iv.data());
+        _write(iv.data(), iv.size(), out);
+    } else {
+        if (_read(iv.data(), iv.size(), in) < iv.size()) {
+            std::cerr << "insufficient file size" << std::endl;
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    // salted password aka password + salt must be at least 32 Bytes
+    // if shorted, '#' is appended until 32 Bytes are reached
+    std::vector<uint8_t> salted_password(std::max(password.size() + iv.size(), SHA256::HASH_SIZE));
+    for (int i = 0; i < iv.size(); ++i) {
+        salted_password[i] = iv[i];
+    }
+    for (int i = 0; i < password.size(); ++i) {
+        salted_password[iv.size() + i] = UINT8_C(password[i]);
+    }
+    for (int i = password.size() + iv.size(); i < SHA256::HASH_SIZE; ++i) {
+        salted_password[i] = UINT8_C('#');
+    }
+
+    // compute key from password
+    std::array<uint8_t, AES_BLOCK_SIZE> key = { 0 };
+    SHA256::hash(salted_password.data(), salted_password.size(), key.data());
+
+    for (int i = 1; i < 8192; ++i) {
+        SHA256::hash(key.data(), key.size(), key.data());
+    }
+
+    // expand key
+    std::array<uint8_t, AES_EXP_KEY_SIZE> exp_key = { 0 };
+    aes_ctr_expand_key(key.data(), (uint32_t*) exp_key.data());
+
     // do operation, catch exception
     try {
-        if (mode == ENCRYPT) {
-            encrypt_file(in, out, key, (uint32_t *) exp_key, buffer_size);
+        if (mode == ENCRYPTION) {
+            encrypt_file(iv.data(), in, out, key.data(), (uint32_t *) exp_key.data(), buffer_size);
         } else {
-            decrypt_file(in, out, key, (uint32_t *) exp_key, buffer_size);
+            decrypt_file(iv.data(), in, out, key.data(), (uint32_t *) exp_key.data(), buffer_size);
         }
     } catch (std::runtime_error &err) {
         std::cerr << err.what() << std::endl;

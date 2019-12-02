@@ -2,7 +2,7 @@
 #include <aes.hpp>
 #include <cstring>
 #include <iomanip>
-#include <hash.hpp>
+#include <Hash.hpp>
 
 // 1 GB / AES_BLOCK_SIZE
 #define N   (62500000)

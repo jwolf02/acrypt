@@ -10,7 +10,7 @@ set(LIB_SOURCES 	src/sha1.hpp
 					src/sha1.cpp
 					src/sha256.hpp
 					src/sha256.cpp
-					src/hash.hpp
+        src/Hash.hpp
 					src/aes.hpp
 					src/aes.cpp)
 

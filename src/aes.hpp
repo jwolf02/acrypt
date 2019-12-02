@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <random>
+#include <ctime>
 
 #if defined(__amd64__) || defined (__amd64)
 #define __AMD64__
@@ -45,8 +46,7 @@ inline bool aes_has_cpu_support() {
  * @param iv
  */
 inline void aes_generate_iv(uint8_t *iv) {
-    std::random_device rd;
-    std::default_random_engine generator(rd);
+    std::default_random_engine generator(clock());
     std::uniform_int_distribution<uint8_t> distribution(std::numeric_limits<uint8_t>::min(), std::numeric_limits<uint8_t>::max());
 
     for (auto it = iv; it != iv + AES_BLOCK_SIZE; ++it) {
